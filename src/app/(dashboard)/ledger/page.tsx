@@ -266,7 +266,7 @@ export default function LedgerPage() {
               <div className="grid gap-4 py-4">
                 <div>
                   <Label className="text-xs">Select Trip (Optional)</Label>
-                  <Select value={incomeTrip} onValueChange={setIncomeTrip}>
+                  <Select value={incomeTrip} onValueChange={(val) => setIncomeTrip(val || "")}>
                     <SelectTrigger className="mt-1 h-9 text-sm">
                       <SelectValue placeholder="Select trip to auto-fill" />
                     </SelectTrigger>
@@ -316,7 +316,7 @@ export default function LedgerPage() {
                 </div>
                 <div>
                   <Label className="text-xs">Category</Label>
-                  <Select value={incomeCategory} onValueChange={setIncomeCategory}>
+                  <Select value={incomeCategory} onValueChange={(val) => setIncomeCategory(val || "")}>
                     <SelectTrigger className="mt-1 h-9 text-sm">
                       <SelectValue />
                     </SelectTrigger>
@@ -331,7 +331,7 @@ export default function LedgerPage() {
                 </div>
                 <div>
                   <Label className="text-xs">Payment Mode</Label>
-                  <Select value={incomeMode} onValueChange={setIncomeMode}>
+                  <Select value={incomeMode} onValueChange={(val) => setIncomeMode(val || "")}>
                     <SelectTrigger className="mt-1 h-9 text-sm">
                       <SelectValue placeholder="Select mode" />
                     </SelectTrigger>
@@ -365,10 +365,8 @@ export default function LedgerPage() {
                 </div>
               </div>
               <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline" size="sm">
-                    Cancel
-                  </Button>
+                <DialogClose render={<Button variant="outline" size="sm" />}>
+                  Cancel
                 </DialogClose>
                 <Button
                   size="sm"
@@ -438,7 +436,7 @@ export default function LedgerPage() {
                         value={line.category}
                         onValueChange={(val) => {
                           const updated = [...expenseLines];
-                          updated[idx].category = val;
+                          updated[idx].category = val || "";
                           setExpenseLines(updated);
                         }}
                       >
@@ -522,10 +520,8 @@ export default function LedgerPage() {
                 </div>
               </div>
               <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline" size="sm">
-                    Cancel
-                  </Button>
+                <DialogClose render={<Button variant="outline" size="sm" />}>
+                  Cancel
                 </DialogClose>
                 <Button
                   size="sm"
@@ -612,7 +608,7 @@ export default function LedgerPage() {
             className="pl-9 h-9 text-sm"
           />
         </div>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
+        <Select value={typeFilter} onValueChange={(val) => setTypeFilter(val || "")}>
           <SelectTrigger className="h-9 text-sm w-[140px]">
             <SelectValue placeholder="Filter" />
           </SelectTrigger>

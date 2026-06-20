@@ -9,7 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   TrendingUp,
@@ -208,7 +209,7 @@ export default function DashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(value: number) => [formatCurrency(value)]} contentStyle={{ borderRadius: "8px", border: "1px solid #e2e8f0", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: "12px" }} />
+                  <Tooltip formatter={(value: any) => [formatCurrency(Number(value || 0))]} contentStyle={{ borderRadius: "8px", border: "1px solid #e2e8f0", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: "12px" }} />
                   <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} />
                   <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Income" />
                   <Bar dataKey="expenses" fill="#ef4444" radius={[4, 4, 0, 0]} name="Expenses" />
@@ -266,7 +267,7 @@ export default function DashboardPage() {
               <CardTitle className="font-heading text-base">Recent Trips</CardTitle>
               <CardDescription className="text-xs">Latest dispatches and their status</CardDescription>
             </div>
-            <Button variant="ghost" size="sm" className="text-xs" asChild><a href="/trips">View All →</a></Button>
+            <Link href="/trips" className={buttonVariants({ variant: "ghost", size: "sm", className: "text-xs" })}>View All →</Link>
           </div>
         </CardHeader>
         <CardContent>

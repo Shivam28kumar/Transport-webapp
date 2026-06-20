@@ -324,7 +324,7 @@ export default function FleetPage() {
                     </div>
                     <div>
                       <Label className="text-xs">Vehicle Type</Label>
-                      <Select value={newTruckType} onValueChange={setNewTruckType}>
+                      <Select value={newTruckType} onValueChange={(val) => setNewTruckType(val || "")}>
                         <SelectTrigger className="mt-1 h-9 text-sm">
                           <SelectValue placeholder="Select type" />
                         </SelectTrigger>
@@ -359,10 +359,8 @@ export default function FleetPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="outline" size="sm">
-                      Cancel
-                    </Button>
+                  <DialogClose render={<Button variant="outline" size="sm" />}>
+                    Cancel
                   </DialogClose>
                   <Button
                     size="sm"
@@ -410,7 +408,7 @@ export default function FleetPage() {
                   )}
                   <Separator className="my-2" />
                   <div className="flex items-center gap-2 flex-wrap">
-                    {truck.documents.map((doc) => (
+                    {truck.documents.map((doc: any) => (
                       <div
                         key={doc.type}
                         className={cn(
@@ -571,10 +569,8 @@ export default function FleetPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="outline" size="sm">
-                      Cancel
-                    </Button>
+                  <DialogClose render={<Button variant="outline" size="sm" />}>
+                    Cancel
                   </DialogClose>
                   <Button
                     size="sm"
@@ -694,7 +690,7 @@ export default function FleetPage() {
                   <FileText className="w-4 h-4" /> Digital Vault
                 </h4>
                 <div className="space-y-2">
-                  {selectedTruck.documents.map((doc) => (
+                  {selectedTruck.documents.map((doc: any) => (
                     <div
                       key={doc.type}
                       className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"

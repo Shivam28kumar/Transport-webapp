@@ -55,7 +55,7 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <TooltipProvider delayDuration={0}>
+    <TooltipProvider delay={0}>
       <aside
         className={cn(
           "hidden md:flex flex-col bg-[var(--sidebar)] text-[var(--sidebar-foreground)] h-screen sticky top-0 transition-all duration-300 ease-in-out border-r border-[var(--sidebar-border)] relative z-30",
@@ -130,7 +130,7 @@ export function Sidebar() {
             if (collapsed) {
               return (
                 <Tooltip key={item.href}>
-                  <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                  <TooltipTrigger render={linkContent} />
                   <TooltipContent side="right" className="font-medium">
                     {item.title}
                   </TooltipContent>
@@ -166,13 +166,15 @@ export function Sidebar() {
             </div>
           ) : (
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Avatar className="w-8 h-8 cursor-pointer">
-                  <AvatarFallback className="bg-sky-500/20 text-sky-400 text-xs font-bold">
-                    VG
-                  </AvatarFallback>
-                </Avatar>
-              </TooltipTrigger>
+              <TooltipTrigger
+                render={
+                  <Avatar className="w-8 h-8 cursor-pointer">
+                    <AvatarFallback className="bg-sky-500/20 text-sky-400 text-xs font-bold">
+                      VG
+                    </AvatarFallback>
+                  </Avatar>
+                }
+              />
               <TooltipContent side="right">Admin User</TooltipContent>
             </Tooltip>
           )}

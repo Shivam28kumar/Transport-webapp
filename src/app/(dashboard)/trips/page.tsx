@@ -312,7 +312,7 @@ export default function TripsPage() {
                 <div className="space-y-3">
                   <div>
                     <Label className="text-xs">Select Truck</Label>
-                    <Select value={selectedTruckId} onValueChange={setSelectedTruckId}>
+                    <Select value={selectedTruckId} onValueChange={(val) => setSelectedTruckId(val || "")}>
                       <SelectTrigger className="mt-1 h-9 text-sm">
                         <SelectValue placeholder="Select vehicle" />
                       </SelectTrigger>
@@ -327,7 +327,7 @@ export default function TripsPage() {
                   </div>
                   <div>
                     <Label className="text-xs">Select Driver</Label>
-                    <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
+                    <Select value={selectedDriverId} onValueChange={(val) => setSelectedDriverId(val || "")}>
                       <SelectTrigger className="mt-1 h-9 text-sm">
                         <SelectValue placeholder="Select driver" />
                       </SelectTrigger>
@@ -438,7 +438,7 @@ export default function TripsPage() {
                           value={exp.category}
                           onValueChange={(val) => {
                             const updated = [...newExpenses];
-                            updated[idx].category = val;
+                            updated[idx].category = val || "";
                             setNewExpenses(updated);
                           }}
                         >
@@ -525,10 +525,8 @@ export default function TripsPage() {
               </div>
             </div>
             <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline" size="sm">
-                  Cancel
-                </Button>
+              <DialogClose render={<Button variant="outline" size="sm" />}>
+                Cancel
               </DialogClose>
               <Button
                 size="sm"
@@ -600,7 +598,7 @@ export default function TripsPage() {
             className="pl-9 h-9 text-sm"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val || "")}>
           <SelectTrigger className="h-9 text-sm w-[160px]">
             <SelectValue placeholder="Filter status" />
           </SelectTrigger>
