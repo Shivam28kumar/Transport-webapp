@@ -30,14 +30,17 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     Object.assign(trip, body);
 
     // Recalculate financial fields
-    trip.totalFare = trip.freightRate * trip.quantity;
-    trip.pendingBalance = trip.totalFare - trip.advance;
-    trip.totalExpenses = trip.expenses.reduce((sum: number, e: { amount: number }) => sum + e.amount, 0);
+    const freightRate = Number(trip.freightRate) || 0;
+    const quantity = Number(trip.quantity) || 0;
+    const advance = Number(trip.advance) || 0;
+    trip.totalFare = freightRate * quantity;
+    trip.pendingBalance = trip.totalFare - advance;
+    trip.totalExpenses = (trip.expenses || []).reduce((sum: number, e: { amount?: number }) => sum + (Number(e.amount) || 0), 0);
     trip.netProfit = trip.totalFare - trip.totalExpenses;
 
     // Auto-set payment status
-    if (trip.advance === 0) trip.paymentStatus = "Pending";
-    else if (trip.advance >= trip.totalFare) trip.paymentStatus = "Complete";
+    if (advance === 0) trip.paymentStatus = "Pending";
+    else if (advance >= trip.totalFare) trip.paymentStatus = "Complete";
     else trip.paymentStatus = "Partial";
 
     await trip.save();

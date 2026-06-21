@@ -42,6 +42,7 @@ import {
   AlertCircle,
   Receipt,
   X,
+  Edit,
 } from "lucide-react";
 import { cn, formatCurrency, formatDate, getStatusColor } from "@/lib/utils";
 import { useEffect } from "react";
@@ -78,6 +79,34 @@ export default function TripsPage() {
   const [isSavingTrip, setIsSavingTrip] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
+  const [editingTrip, setEditingTrip] = useState<any | null>(null);
+  const [newTripStatus, setNewTripStatus] = useState("Planned");
+  const [monthFilter, setMonthFilter] = useState("all");
+
+  const formatMonthYear = (monthStr: string) => {
+    const [year, month] = monthStr.split("-");
+    const date = new Date(Number(year), Number(month) - 1, 1);
+    return date.toLocaleString("default", { month: "long", year: "numeric" });
+  };
+
+  const handleStartEditTrip = (trip: any) => {
+    setNewOrigin(trip.origin || "");
+    setNewDestination(trip.destination || "");
+    setNewConsignment(trip.consignment || "");
+    setNewMaterial(trip.material || "");
+    setNewStartDate(trip.startDate ? trip.startDate.split('T')[0] : "");
+    setSelectedTruckId(trip.truckId || "");
+    setSelectedDriverId(trip.driverId || "");
+    setFreightRate((trip.freightRate || 0).toString());
+    setQuantity((trip.quantity || 0).toString());
+    setAdvance((trip.advance || 0).toString());
+    setNewExpenses(trip.expenses || []);
+    setNewTripStatus(trip.tripStatus || "Planned");
+    setEditingTrip(trip);
+    setSelectedTrip(null);
+    setIsCreateDialogOpen(true);
+  };
+
   const fetchTripsData = async () => {
     try {
       setLoading(true);
@@ -104,44 +133,45 @@ export default function TripsPage() {
     const truckObj = trucksList.find(t => t._id === selectedTruckId);
     const driverObj = driversList.find(d => d._id === selectedDriverId);
 
-    if (!newOrigin || !newDestination || !newConsignment || !newMaterial || !newStartDate || !truckObj || !driverObj) {
-      return;
-    }
-
     try {
       setIsSavingTrip(true);
       
+      const isEdit = !!editingTrip;
       const payload = {
-        origin: newOrigin,
-        destination: newDestination,
-        consignment: newConsignment,
-        material: newMaterial,
-        startDate: newStartDate,
-        truckId: truckObj._id,
-        vehicleNo: truckObj.vehicleNo,
-        driverId: driverObj._id,
-        driverName: driverObj.name,
+        origin: newOrigin || "",
+        destination: newDestination || "",
+        consignment: newConsignment || "",
+        material: newMaterial || "",
+        startDate: newStartDate || "",
+        truckId: truckObj?._id || "",
+        vehicleNo: truckObj?.vehicleNo || "Unassigned",
+        driverId: driverObj?._id || "",
+        driverName: driverObj?.name || "Unassigned",
         freightRate: Number(freightRate) || 0,
         quantity: Number(quantity) || 0,
         advance: Number(advance) || 0,
         expenses: newExpenses.map(e => ({
           category: e.category,
           amount: Number(e.amount) || 0,
-          description: e.description,
-          date: newStartDate,
+          description: e.description || "",
+          date: newStartDate || "",
         })),
-        tripStatus: "Planned"
+        tripStatus: isEdit ? newTripStatus : "Planned"
       };
 
-      const res = await fetch("/api/trips", {
-        method: "POST",
+      const res = await fetch(isEdit ? `/api/trips/${editingTrip._id}` : "/api/trips", {
+        method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       if (res.ok) {
         const savedTrip = await res.json();
-        setTripsList(prev => [savedTrip, ...prev]);
+        if (isEdit) {
+          setTripsList(prev => prev.map(t => t._id === savedTrip._id ? savedTrip : t));
+        } else {
+          setTripsList(prev => [savedTrip, ...prev]);
+        }
         
         // Reset form
         setNewOrigin("");
@@ -155,6 +185,8 @@ export default function TripsPage() {
         setQuantity("");
         setAdvance("");
         setNewExpenses([]);
+        setNewTripStatus("Planned");
+        setEditingTrip(null);
         setIsCreateDialogOpen(false);
       }
     } catch (error) {
@@ -167,20 +199,37 @@ export default function TripsPage() {
   const filteredTrips = tripsList.filter((trip) => {
     const matchesSearch =
       (trip.tripId || trip.id || "").toLowerCase().includes(search.toLowerCase()) ||
-      trip.origin.toLowerCase().includes(search.toLowerCase()) ||
-      trip.destination.toLowerCase().includes(search.toLowerCase()) ||
-      trip.vehicleNo.toLowerCase().includes(search.toLowerCase()) ||
-      trip.consignment.toLowerCase().includes(search.toLowerCase());
+      (trip.origin || "").toLowerCase().includes(search.toLowerCase()) ||
+      (trip.destination || "").toLowerCase().includes(search.toLowerCase()) ||
+      (trip.vehicleNo || "").toLowerCase().includes(search.toLowerCase()) ||
+      (trip.consignment || "").toLowerCase().includes(search.toLowerCase());
     const matchesStatus =
       statusFilter === "all" || trip.tripStatus === statusFilter;
-    return matchesSearch && matchesStatus;
+    
+    let matchesMonth = true;
+    if (monthFilter !== "all" && trip.startDate) {
+      const tripMonth = trip.startDate.substring(0, 7); // "YYYY-MM"
+      matchesMonth = tripMonth === monthFilter;
+    }
+
+    return matchesSearch && matchesStatus && matchesMonth;
   });
 
-  const totalRevenue = tripsList.reduce((sum, t) => sum + t.totalFare, 0);
-  const totalNetProfit = tripsList.reduce((sum, t) => sum + t.netProfit, 0);
+  const totalRevenue = tripsList.reduce((sum, t) => sum + (t.totalFare || 0), 0);
+  const totalNetProfit = tripsList.reduce((sum, t) => sum + (t.netProfit || 0), 0);
+  const totalPendingAmount = tripsList.reduce((sum, t) => sum + (t.pendingBalance || 0), 0);
+  const totalReceivedFund = totalNetProfit - totalPendingAmount;
   const inTransitCount = tripsList.filter(
     (t) => t.tripStatus === "In Transit"
   ).length;
+
+  const uniqueMonths = Array.from(
+    new Set(
+      tripsList
+        .filter((t) => t.startDate)
+        .map((t) => t.startDate.substring(0, 7))
+    )
+  ).sort().reverse();
 
   const calcTotalFare =
     (Number(freightRate) || 0) * (Number(quantity) || 0);
@@ -238,26 +287,61 @@ export default function TripsPage() {
             Industrial dispatch, freight calculations & profit audit
           </p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger
-            render={
-              <Button
-                size="sm"
-                className="gap-1.5 bg-gradient-to-r from-[#0a192f] to-[#1d3461] hover:from-[#112240] hover:to-[#0a192f]"
-              >
-                <Plus className="w-3.5 h-3.5" /> Create Trip
-              </Button>
-            }
-          />
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="font-heading">
-                Create New Trip
-              </DialogTitle>
-              <DialogDescription>
-                Configure dispatch details, freight, and expenses.
-              </DialogDescription>
-            </DialogHeader>
+            <Dialog 
+              open={isCreateDialogOpen} 
+              onOpenChange={(open) => {
+                setIsCreateDialogOpen(open);
+                if (!open) {
+                  setEditingTrip(null);
+                  setNewOrigin("");
+                  setNewDestination("");
+                  setNewConsignment("");
+                  setNewMaterial("");
+                  setNewStartDate("");
+                  setSelectedTruckId("");
+                  setSelectedDriverId("");
+                  setFreightRate("");
+                  setQuantity("");
+                  setAdvance("");
+                  setNewExpenses([]);
+                  setNewTripStatus("Planned");
+                }
+              }}
+            >
+              <DialogTrigger
+                render={
+                  <Button
+                    size="sm"
+                    className="gap-1.5 bg-gradient-to-r from-[#0a192f] to-[#1d3461] hover:from-[#112240] hover:to-[#0a192f]"
+                    onClick={() => {
+                      setEditingTrip(null);
+                      setNewOrigin("");
+                      setNewDestination("");
+                      setNewConsignment("");
+                      setNewMaterial("");
+                      setNewStartDate("");
+                      setSelectedTruckId("");
+                      setSelectedDriverId("");
+                      setFreightRate("");
+                      setQuantity("");
+                      setAdvance("");
+                      setNewExpenses([]);
+                      setNewTripStatus("Planned");
+                    }}
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Create Trip
+                  </Button>
+                }
+              />
+              <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="font-heading">
+                    {editingTrip ? "Edit Trip" : "Create New Trip"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingTrip ? "Modify this dispatch's details and freight pricing." : "Configure dispatch details, freight, and expenses."}
+                  </DialogDescription>
+                </DialogHeader>
             <div className="space-y-4 py-4">
               {/* Dual Column Form */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -307,6 +391,22 @@ export default function TripsPage() {
                       onChange={(e) => setNewStartDate(e.target.value)}
                     />
                   </div>
+                  {editingTrip && (
+                    <div>
+                      <Label className="text-xs">Trip Status</Label>
+                      <Select value={newTripStatus} onValueChange={(val) => setNewTripStatus(val || "")}>
+                        <SelectTrigger className="mt-1 h-9 text-sm">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Planned">Planned</SelectItem>
+                          <SelectItem value="In Transit">In Transit</SelectItem>
+                          <SelectItem value="Delivered">Delivered</SelectItem>
+                          <SelectItem value="Completed">Completed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-3">
@@ -528,21 +628,21 @@ export default function TripsPage() {
               <DialogClose render={<Button variant="outline" size="sm" />}>
                 Cancel
               </DialogClose>
-              <Button
-                size="sm"
-                className="bg-gradient-to-r from-[#0a192f] to-[#1d3461]"
-                onClick={handleSaveTrip}
-                disabled={isSavingTrip || !newOrigin || !newDestination || !newConsignment || !newMaterial || !newStartDate || !selectedTruckId || !selectedDriverId}
-              >
-                {isSavingTrip ? "Creating..." : "Save Trip"}
-              </Button>
+                  <Button
+                    size="sm"
+                    className="bg-gradient-to-r from-[#0a192f] to-[#1d3461]"
+                    onClick={handleSaveTrip}
+                    disabled={isSavingTrip}
+                  >
+                    {isSavingTrip ? "Saving..." : (editingTrip ? "Update Trip" : "Save Trip")}
+                  </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         {[
           {
             label: "Total Trips",
@@ -567,6 +667,18 @@ export default function TripsPage() {
             value: formatCurrency(totalNetProfit),
             icon: TrendingUp,
             color: "text-violet-500",
+          },
+          {
+            label: "Outstanding Fund",
+            value: formatCurrency(totalPendingAmount),
+            icon: AlertCircle,
+            color: "text-rose-500",
+          },
+          {
+            label: "Received Fund",
+            value: formatCurrency(totalReceivedFund),
+            icon: CheckCircle2,
+            color: "text-emerald-500",
           },
         ].map((stat) => (
           <Card key={stat.label} className="shadow-sm">
@@ -599,7 +711,7 @@ export default function TripsPage() {
           />
         </div>
         <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val || "")}>
-          <SelectTrigger className="h-9 text-sm w-[160px]">
+          <SelectTrigger className="h-9 text-sm w-[140px]">
             <SelectValue placeholder="Filter status" />
           </SelectTrigger>
           <SelectContent>
@@ -608,6 +720,19 @@ export default function TripsPage() {
             <SelectItem value="In Transit">In Transit</SelectItem>
             <SelectItem value="Delivered">Delivered</SelectItem>
             <SelectItem value="Completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={monthFilter} onValueChange={(val) => setMonthFilter(val || "")}>
+          <SelectTrigger className="h-9 text-sm w-[150px]">
+            <SelectValue placeholder="Filter month" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Months</SelectItem>
+            {uniqueMonths.map((m: any) => (
+              <SelectItem key={m} value={m}>
+                {formatMonthYear(m)}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -754,25 +879,35 @@ export default function TripsPage() {
               </DialogHeader>
 
               <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Badge
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-xs",
+                        getStatusColor(selectedTrip.tripStatus)
+                      )}
+                    >
+                      {selectedTrip.tripStatus}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-xs",
+                        getStatusColor(selectedTrip.paymentStatus)
+                      )}
+                    >
+                      Payment: {selectedTrip.paymentStatus}
+                    </Badge>
+                  </div>
+                  <Button
                     variant="outline"
-                    className={cn(
-                      "text-xs",
-                      getStatusColor(selectedTrip.tripStatus)
-                    )}
+                    size="sm"
+                    className="gap-1 text-xs"
+                    onClick={() => handleStartEditTrip(selectedTrip)}
                   >
-                    {selectedTrip.tripStatus}
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "text-xs",
-                      getStatusColor(selectedTrip.paymentStatus)
-                    )}
-                  >
-                    Payment: {selectedTrip.paymentStatus}
-                  </Badge>
+                    <Edit className="w-3 h-3" /> Edit Trip
+                  </Button>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

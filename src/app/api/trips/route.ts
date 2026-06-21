@@ -22,8 +22,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     // Auto-calculate fields
-    const totalFare = body.freightRate * body.quantity;
-    const advance = body.advance || 0;
+    const freightRate = Number(body.freightRate) || 0;
+    const quantity = Number(body.quantity) || 0;
+    const totalFare = freightRate * quantity;
+    const advance = Number(body.advance) || 0;
     const pendingBalance = totalFare - advance;
 
     // Auto-set payment status
@@ -34,7 +36,7 @@ export async function POST(req: NextRequest) {
 
     // Calculate expenses
     const expenses = body.expenses || [];
-    const totalExpenses = expenses.reduce((sum: number, e: { amount: number }) => sum + e.amount, 0);
+    const totalExpenses = expenses.reduce((sum: number, e: { amount?: number }) => sum + (Number(e.amount) || 0), 0);
     const netProfit = totalFare - totalExpenses;
 
     // Generate trip ID

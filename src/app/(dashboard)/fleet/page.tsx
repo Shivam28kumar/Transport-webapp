@@ -82,6 +82,39 @@ export default function FleetPage() {
   const [newDriverIfsc, setNewDriverIfsc] = useState("");
   const [isSavingDriver, setIsSavingDriver] = useState(false);
 
+  const [editingTruck, setEditingTruck] = useState<any | null>(null);
+  const [newTruckStatus, setNewTruckStatus] = useState("Active");
+
+  const [editingDriver, setEditingDriver] = useState<any | null>(null);
+  const [newDriverStatus, setNewDriverStatus] = useState("Available");
+
+  const handleStartEditTruck = (truck: any) => {
+    setNewTruckNo(truck.vehicleNo);
+    setNewTruckType(truck.type);
+    setNewTruckCapacity(truck.capacity);
+    setNewTruckGps(truck.gpsLink || "");
+    setNewTruckStatus(truck.status || "Active");
+    setEditingTruck(truck);
+    setSelectedTruck(null);
+    setIsTruckDialogOpen(true);
+  };
+
+  const handleStartEditDriver = (driver: any) => {
+    setNewDriverName(driver.name);
+    setNewDriverPhone(driver.phone);
+    setNewDriverDl(driver.dl);
+    setNewDriverDlExpiry(driver.dlExpiry ? driver.dlExpiry.split('T')[0] : "");
+    setNewDriverAadhaar(driver.aadhaar || "");
+    setNewDriverPan(driver.pan || "");
+    setNewDriverBankName(driver.bankName || "");
+    setNewDriverAccountNo(driver.accountNo || "");
+    setNewDriverIfsc(driver.ifsc || "");
+    setNewDriverStatus(driver.status || "Available");
+    setEditingDriver(driver);
+    setSelectedDriver(null);
+    setIsDriverDialogOpen(true);
+  };
+
   const fetchFleet = async () => {
     try {
       setLoading(true);
@@ -113,6 +146,7 @@ export default function FleetPage() {
     try {
       setIsSavingTruck(true);
       
+      const isEdit = !!editingTruck;
       // Setup default valid documents in Digital Vault
       const defaultDocs = [
         { type: "RC", number: "Not Provided", expiryDate: new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0], status: "Valid" },
@@ -122,27 +156,33 @@ export default function FleetPage() {
         { type: "PUC", number: "Not Provided", expiryDate: new Date(Date.now() + 180*24*60*60*1000).toISOString().split('T')[0], status: "Valid" },
       ];
 
-      const res = await fetch("/api/trucks", {
-        method: "POST",
+      const res = await fetch(isEdit ? `/api/trucks/${editingTruck._id}` : "/api/trucks", {
+        method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           vehicleNo: newTruckNo.toUpperCase(),
           type: newTruckType,
           capacity: newTruckCapacity || "Not Specified",
           gpsLink: newTruckGps || undefined,
-          status: "Active",
-          documents: defaultDocs,
+          status: isEdit ? newTruckStatus : "Active",
+          documents: isEdit ? editingTruck.documents : defaultDocs,
         }),
       });
 
       if (res.ok) {
         const saved = await res.json();
-        setTrucksList((prev) => [saved, ...prev]);
+        if (isEdit) {
+          setTrucksList((prev) => prev.map((t) => (t._id === saved._id ? saved : t)));
+        } else {
+          setTrucksList((prev) => [saved, ...prev]);
+        }
         // Reset form
         setNewTruckNo("");
         setNewTruckType("");
         setNewTruckCapacity("");
         setNewTruckGps("");
+        setNewTruckStatus("Active");
+        setEditingTruck(null);
         setIsTruckDialogOpen(false);
       }
     } catch (error) {
@@ -157,8 +197,9 @@ export default function FleetPage() {
     try {
       setIsSavingDriver(true);
 
-      const res = await fetch("/api/drivers", {
-        method: "POST",
+      const isEdit = !!editingDriver;
+      const res = await fetch(isEdit ? `/api/drivers/${editingDriver._id}` : "/api/drivers", {
+        method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: newDriverName,
@@ -170,13 +211,17 @@ export default function FleetPage() {
           bankName: newDriverBankName || "Not Provided",
           accountNo: newDriverAccountNo || "Not Provided",
           ifsc: newDriverIfsc || "Not Provided",
-          status: "Available",
+          status: isEdit ? newDriverStatus : "Available",
         }),
       });
 
       if (res.ok) {
         const saved = await res.json();
-        setDriversList((prev) => [saved, ...prev]);
+        if (isEdit) {
+          setDriversList((prev) => prev.map((d) => (d._id === saved._id ? saved : d)));
+        } else {
+          setDriversList((prev) => [saved, ...prev]);
+        }
         // Reset form
         setNewDriverName("");
         setNewDriverPhone("");
@@ -187,6 +232,8 @@ export default function FleetPage() {
         setNewDriverBankName("");
         setNewDriverAccountNo("");
         setNewDriverIfsc("");
+        setNewDriverStatus("Available");
+        setEditingDriver(null);
         setIsDriverDialogOpen(false);
       }
     } catch (error) {
@@ -291,12 +338,33 @@ export default function FleetPage() {
                 className="pl-9 h-9 text-sm"
               />
             </div>
-            <Dialog open={isTruckDialogOpen} onOpenChange={setIsTruckDialogOpen}>
+            <Dialog 
+              open={isTruckDialogOpen} 
+              onOpenChange={(open) => { 
+                setIsTruckDialogOpen(open); 
+                if (!open) { 
+                  setEditingTruck(null); 
+                  setNewTruckNo(""); 
+                  setNewTruckType(""); 
+                  setNewTruckCapacity(""); 
+                  setNewTruckGps(""); 
+                  setNewTruckStatus("Active");
+                } 
+              }}
+            >
               <DialogTrigger
                 render={
                   <Button
                     size="sm"
                     className="gap-1.5 bg-gradient-to-r from-[#0a192f] to-[#1d3461] hover:from-[#112240] hover:to-[#0a192f]"
+                    onClick={() => {
+                      setEditingTruck(null);
+                      setNewTruckNo("");
+                      setNewTruckType("");
+                      setNewTruckCapacity("");
+                      setNewTruckGps("");
+                      setNewTruckStatus("Active");
+                    }}
                   >
                     <Plus className="w-3.5 h-3.5" /> Add Truck
                   </Button>
@@ -305,10 +373,10 @@ export default function FleetPage() {
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle className="font-heading">
-                    Add New Truck
+                    {editingTruck ? "Edit Truck" : "Add New Truck"}
                   </DialogTitle>
                   <DialogDescription>
-                    Register a new vehicle in the fleet registry.
+                    {editingTruck ? "Update details for this vehicle in the fleet registry." : "Register a new vehicle in the fleet registry."}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -357,6 +425,22 @@ export default function FleetPage() {
                       onChange={(e) => setNewTruckGps(e.target.value)}
                     />
                   </div>
+                  {editingTruck && (
+                    <div>
+                      <Label className="text-xs">Status</Label>
+                      <Select value={newTruckStatus} onValueChange={(val) => setNewTruckStatus(val || "")}>
+                        <SelectTrigger className="mt-1 h-9 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Active">Active</SelectItem>
+                          <SelectItem value="In Transit">In Transit</SelectItem>
+                          <SelectItem value="Maintenance">Maintenance</SelectItem>
+                          <SelectItem value="Idle">Idle</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <DialogClose render={<Button variant="outline" size="sm" />}>
@@ -368,7 +452,7 @@ export default function FleetPage() {
                     onClick={handleSaveTruck}
                     disabled={isSavingTruck || !newTruckNo || !newTruckType}
                   >
-                    {isSavingTruck ? "Saving..." : "Save Truck"}
+                    {isSavingTruck ? "Saving..." : (editingTruck ? "Update Truck" : "Save Truck")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -453,12 +537,43 @@ export default function FleetPage() {
                 className="pl-9 h-9 text-sm"
               />
             </div>
-            <Dialog open={isDriverDialogOpen} onOpenChange={setIsDriverDialogOpen}>
+            <Dialog 
+              open={isDriverDialogOpen} 
+              onOpenChange={(open) => { 
+                setIsDriverDialogOpen(open); 
+                if (!open) { 
+                  setEditingDriver(null); 
+                  setNewDriverName(""); 
+                  setNewDriverPhone(""); 
+                  setNewDriverDl(""); 
+                  setNewDriverDlExpiry(""); 
+                  setNewDriverAadhaar(""); 
+                  setNewDriverPan(""); 
+                  setNewDriverBankName(""); 
+                  setNewDriverAccountNo(""); 
+                  setNewDriverIfsc(""); 
+                  setNewDriverStatus("Available");
+                } 
+              }}
+            >
               <DialogTrigger
                 render={
                   <Button
                     size="sm"
                     className="gap-1.5 bg-gradient-to-r from-[#0a192f] to-[#1d3461] hover:from-[#112240] hover:to-[#0a192f]"
+                    onClick={() => {
+                      setEditingDriver(null);
+                      setNewDriverName("");
+                      setNewDriverPhone("");
+                      setNewDriverDl("");
+                      setNewDriverDlExpiry("");
+                      setNewDriverAadhaar("");
+                      setNewDriverPan("");
+                      setNewDriverBankName("");
+                      setNewDriverAccountNo("");
+                      setNewDriverIfsc("");
+                      setNewDriverStatus("Available");
+                    }}
                   >
                     <Plus className="w-3.5 h-3.5" /> Add Driver
                   </Button>
@@ -467,10 +582,10 @@ export default function FleetPage() {
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle className="font-heading">
-                    Add New Driver
+                    {editingDriver ? "Edit Driver" : "Add New Driver"}
                   </DialogTitle>
                   <DialogDescription>
-                    Register a new driver profile.
+                    {editingDriver ? "Update information for this driver profile." : "Register a new driver profile."}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -558,14 +673,31 @@ export default function FleetPage() {
                       />
                     </div>
                   </div>
-                  <div>
-                    <Label className="text-xs">IFSC Code</Label>
-                    <Input
-                      placeholder="SBIN0001234"
-                      className="mt-1 h-9 text-sm"
-                      value={newDriverIfsc}
-                      onChange={(e) => setNewDriverIfsc(e.target.value)}
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">IFSC Code</Label>
+                      <Input
+                        placeholder="SBIN0001234"
+                        className="mt-1 h-9 text-sm"
+                        value={newDriverIfsc}
+                        onChange={(e) => setNewDriverIfsc(e.target.value)}
+                      />
+                    </div>
+                    {editingDriver && (
+                      <div>
+                        <Label className="text-xs">Status</Label>
+                        <Select value={newDriverStatus} onValueChange={(val) => setNewDriverStatus(val || "")}>
+                          <SelectTrigger className="mt-1 h-9 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Available">Available</SelectItem>
+                            <SelectItem value="On Trip">On Trip</SelectItem>
+                            <SelectItem value="On Leave">On Leave</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <DialogFooter>
@@ -578,7 +710,7 @@ export default function FleetPage() {
                     onClick={handleSaveDriver}
                     disabled={isSavingDriver || !newDriverName || !newDriverPhone || !newDriverDl}
                   >
-                    {isSavingDriver ? "Saving..." : "Save Driver"}
+                    {isSavingDriver ? "Saving..." : (editingDriver ? "Update Driver" : "Save Driver")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -681,7 +813,12 @@ export default function FleetPage() {
                   >
                     {selectedTruck.status}
                   </Badge>
-                  <Button variant="outline" size="sm" className="gap-1 text-xs">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-1 text-xs"
+                    onClick={() => handleStartEditTruck(selectedTruck)}
+                  >
                     <Edit className="w-3 h-3" /> Edit
                   </Button>
                 </div>
@@ -755,15 +892,25 @@ export default function FleetPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "text-xs",
-                    getStatusColor(selectedDriver.status)
-                  )}
-                >
-                  {selectedDriver.status}
-                </Badge>
+                <div className="flex items-center justify-between">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-xs",
+                      getStatusColor(selectedDriver.status)
+                    )}
+                  >
+                    {selectedDriver.status}
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1 text-xs"
+                    onClick={() => handleStartEditDriver(selectedDriver)}
+                  >
+                    <Edit className="w-3 h-3" /> Edit
+                  </Button>
+                </div>
                 <Separator />
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 bg-muted/50 rounded-lg">

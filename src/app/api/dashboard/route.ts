@@ -35,7 +35,7 @@ export async function GET() {
     ).length;
 
     const outstandingCollection = trips.reduce(
-      (sum, t) => sum + t.pendingBalance,
+      (sum, t) => sum + (t.pendingBalance || 0),
       0
     );
 
@@ -82,8 +82,12 @@ export async function GET() {
     };
 
     // Recent trips
-    const recentTrips = trips
-      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+    const recentTrips = [...trips]
+      .sort((a, b) => {
+        const dateA = a.startDate ? new Date(a.startDate).getTime() : 0;
+        const dateB = b.startDate ? new Date(b.startDate).getTime() : 0;
+        return dateB - dateA;
+      })
       .slice(0, 5);
 
     return NextResponse.json({

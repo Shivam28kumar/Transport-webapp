@@ -13,6 +13,13 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   TrendingUp,
   Truck,
   Route,
@@ -56,6 +63,31 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+
+  const [isOutstandingOpen, setIsOutstandingOpen] = useState(false);
+  const [pendingTrips, setPendingTrips] = useState<any[]>([]);
+  const [loadingPending, setLoadingPending] = useState(false);
+
+  const fetchPendingTrips = async () => {
+    try {
+      setLoadingPending(true);
+      const res = await fetch("/api/trips");
+      if (res.ok) {
+        const trips = await res.json();
+        const pending = trips.filter((t: any) => (t.pendingBalance || 0) > 0);
+        setPendingTrips(pending);
+      }
+    } catch (error) {
+      console.error("Failed to fetch pending trips:", error);
+    } finally {
+      setLoadingPending(false);
+    }
+  };
+
+  const handleOpenOutstanding = () => {
+    setIsOutstandingOpen(true);
+    fetchPendingTrips();
+  };
 
   useEffect(() => {
     fetchStats();
@@ -220,9 +252,15 @@ export default function DashboardPage() {
         </Card>
 
         <div className="space-y-4">
-          <Card className="shadow-sm">
+          <Card 
+            className="shadow-sm hover:shadow-md transition-all cursor-pointer border-amber-500/20 hover:border-amber-500/40 bg-amber-500/5 group"
+            onClick={handleOpenOutstanding}
+          >
             <CardHeader className="pb-2">
-              <CardTitle className="font-heading text-base">Outstanding Collection</CardTitle>
+              <CardTitle className="font-heading text-base flex items-center justify-between">
+                <span>Outstanding Collection</span>
+                <span className="text-[10px] text-amber-600 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full font-sans font-normal opacity-0 group-hover:opacity-100 transition-opacity">View List →</span>
+              </CardTitle>
               <CardDescription className="text-xs">Pending payments across fleet</CardDescription>
             </CardHeader>
             <CardContent>
@@ -284,17 +322,17 @@ export default function DashboardPage() {
                 {stats.recentTrips.map((trip: any) => (
                   <tr key={trip.tripId || trip._id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                     <td className="py-2.5 px-3 font-mono text-xs">{trip.tripId}</td>
-                    <td className="py-2.5 px-3 text-xs">{trip.origin} → {trip.destination}</td>
-                    <td className="py-2.5 px-3 font-mono text-xs">{trip.vehicleNo}</td>
-                    <td className="py-2.5 px-3 font-mono text-xs font-medium">{formatCurrency(trip.totalFare)}</td>
+                    <td className="py-2.5 px-3 text-xs">{(trip.origin || "N/A")} → {(trip.destination || "N/A")}</td>
+                    <td className="py-2.5 px-3 font-mono text-xs">{trip.vehicleNo || "Unassigned"}</td>
+                    <td className="py-2.5 px-3 font-mono text-xs font-medium">{formatCurrency(trip.totalFare || 0)}</td>
                     <td className="py-2.5 px-3">
                       <Badge variant="outline" className={`text-[10px] ${trip.paymentStatus === "Complete" ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20" : trip.paymentStatus === "Partial" ? "bg-blue-500/10 text-blue-700 border-blue-500/20" : "bg-amber-500/10 text-amber-700 border-amber-500/20"}`}>
-                        {trip.paymentStatus}
+                        {trip.paymentStatus || "Pending"}
                       </Badge>
                     </td>
                     <td className="py-2.5 px-3">
                       <Badge variant="outline" className={`text-[10px] ${trip.tripStatus === "Completed" || trip.tripStatus === "Delivered" ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20" : trip.tripStatus === "In Transit" ? "bg-blue-500/10 text-blue-700 border-blue-500/20" : "bg-amber-500/10 text-amber-700 border-amber-500/20"}`}>
-                        {trip.tripStatus}
+                        {trip.tripStatus || "Planned"}
                       </Badge>
                     </td>
                   </tr>
@@ -304,6 +342,65 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Outstanding Collections Modal */}
+      <Dialog open={isOutstandingOpen} onOpenChange={setIsOutstandingOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-[#090d16]/95 border-slate-800 text-white">
+          <DialogHeader>
+            <DialogTitle className="font-heading flex items-center gap-2 text-white">
+              <AlertCircle className="w-5 h-5 text-amber-500" /> Outstanding Collections
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Details of active dispatches with pending payments.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            {loadingPending ? (
+              <div className="flex flex-col items-center justify-center py-8 gap-2">
+                <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+                <p className="text-xs text-slate-400">Loading pending accounts...</p>
+              </div>
+            ) : pendingTrips.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-6">
+                All payments are fully cleared!
+              </p>
+            ) : (
+              <div className="overflow-x-auto border border-slate-800 rounded-lg">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-800 bg-[#0c1322] text-slate-400 uppercase tracking-wider text-[10px]">
+                      <th className="text-left py-2.5 px-3">Trip ID</th>
+                      <th className="text-left py-2.5 px-3">Consignment / Route</th>
+                      <th className="text-left py-2.5 px-3">Vehicle / Driver</th>
+                      <th className="text-right py-2.5 px-3">Total Fare</th>
+                      <th className="text-right py-2.5 px-3">Advance</th>
+                      <th className="text-right py-2.5 px-3">Outstanding</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingTrips.map((trip) => (
+                      <tr key={trip._id || trip.id} className="border-b border-slate-800/60 hover:bg-slate-900/40 transition-colors">
+                        <td className="py-2.5 px-3 font-mono font-semibold text-slate-300">{trip.tripId || trip.id}</td>
+                        <td className="py-2.5 px-3">
+                          <p className="font-semibold text-slate-100">{trip.consignment || "N/A"}</p>
+                          <p className="text-[10px] text-slate-400">{(trip.origin || "N/A")} → {(trip.destination || "N/A")}</p>
+                        </td>
+                        <td className="py-2.5 px-3 font-mono text-slate-300">
+                          <p>{trip.vehicleNo || "Unassigned"}</p>
+                          <p className="text-[10px] text-slate-400 font-sans">{trip.driverName || "Unassigned"}</p>
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono text-slate-200">{formatCurrency(trip.totalFare || 0)}</td>
+                        <td className="py-2.5 px-3 text-right font-mono text-emerald-500">-{formatCurrency(trip.advance || 0)}</td>
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-amber-500">{formatCurrency(trip.pendingBalance || 0)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

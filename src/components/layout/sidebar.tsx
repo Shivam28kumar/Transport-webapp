@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Settings,
   Building2,
+  LogOut,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -53,6 +54,15 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Failed to log out:", error);
+    }
+  };
 
   return (
     <TooltipProvider delay={0}>
@@ -160,23 +170,40 @@ export function Sidebar() {
                   admin@veltrix.in
                 </p>
               </div>
-              <button className="text-slate-500 hover:text-slate-300 transition-colors">
-                <Settings className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button className="text-slate-500 hover:text-slate-300 transition-colors">
+                  <Settings className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="text-slate-500 hover:text-red-400 transition-colors"
+                  title="Log Out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           ) : (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Avatar className="w-8 h-8 cursor-pointer">
-                    <AvatarFallback className="bg-sky-500/20 text-sky-400 text-xs font-bold">
-                      VG
-                    </AvatarFallback>
-                  </Avatar>
-                }
-              />
-              <TooltipContent side="right">Admin User</TooltipContent>
-            </Tooltip>
+            <div className="flex flex-col items-center gap-2">
+              <Avatar className="w-8 h-8">
+                <AvatarFallback className="bg-sky-500/20 text-sky-400 text-xs font-bold">
+                  VG
+                </AvatarFallback>
+              </Avatar>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      onClick={handleLogout}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-red-400 hover:bg-slate-800/30 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                    </button>
+                  }
+                />
+                <TooltipContent side="right">Log Out</TooltipContent>
+              </Tooltip>
+            </div>
           )}
         </div>
 

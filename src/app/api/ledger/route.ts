@@ -49,19 +49,23 @@ export async function POST(req: NextRequest) {
           await ledgerEntry.save();
 
           // Add expense to trip's expense log
+          if (!activeTrip.expenses) {
+            activeTrip.expenses = [];
+          }
           activeTrip.expenses.push({
-            category: entry.category,
+            category: entry.category as any,
             amount: entry.amount,
             description: entry.description,
             date: entry.date,
           });
 
           // Recalculate trip financials
+          const totalFare = Number(activeTrip.totalFare) || 0;
           activeTrip.totalExpenses = activeTrip.expenses.reduce(
-            (sum: number, e: { amount: number }) => sum + e.amount,
+            (sum: number, e: { amount?: number }) => sum + (e.amount || 0),
             0
           );
-          activeTrip.netProfit = activeTrip.totalFare - activeTrip.totalExpenses;
+          activeTrip.netProfit = totalFare - activeTrip.totalExpenses;
 
           await activeTrip.save();
         }
@@ -71,11 +75,14 @@ export async function POST(req: NextRequest) {
       if (entry.type === "Income" && entry.tripId) {
         const trip = await Trip.findOne({ tripId: entry.tripId });
         if (trip) {
-          trip.advance += entry.amount;
-          trip.pendingBalance = trip.totalFare - trip.advance;
+          const currentAdvance = Number(trip.advance) || 0;
+          const totalFare = Number(trip.totalFare) || 0;
+          const newAdvance = currentAdvance + entry.amount;
+          trip.advance = newAdvance;
+          trip.pendingBalance = totalFare - newAdvance;
 
-          if (trip.advance === 0) trip.paymentStatus = "Pending";
-          else if (trip.advance >= trip.totalFare) trip.paymentStatus = "Complete";
+          if (newAdvance === 0) trip.paymentStatus = "Pending";
+          else if (newAdvance >= totalFare) trip.paymentStatus = "Complete";
           else trip.paymentStatus = "Partial";
 
           await trip.save();

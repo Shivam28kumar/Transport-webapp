@@ -3,41 +3,41 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface ITripExpense {
   _id?: string;
   category: "Fuel" | "Toll" | "Driver Advance" | "Loading" | "Unloading" | "Repair" | "RTO" | "Other";
-  amount: number;
-  description: string;
-  date: string;
+  amount?: number;
+  description?: string;
+  date?: string;
 }
 
 export interface ITrip extends Document {
   tripId: string;
-  vehicleNo: string;
-  truckId: string;
-  driverId: string;
-  driverName: string;
-  origin: string;
-  destination: string;
-  consignment: string;
-  material: string;
-  freightRate: number;
-  quantity: number;
-  totalFare: number;
-  advance: number;
-  pendingBalance: number;
-  paymentStatus: "Pending" | "Partial" | "Complete";
-  tripStatus: "Planned" | "In Transit" | "Delivered" | "Completed";
-  startDate: string;
+  vehicleNo?: string;
+  truckId?: string;
+  driverId?: string;
+  driverName?: string;
+  origin?: string;
+  destination?: string;
+  consignment?: string;
+  material?: string;
+  freightRate?: number;
+  quantity?: number;
+  totalFare?: number;
+  advance?: number;
+  pendingBalance?: number;
+  paymentStatus?: "Pending" | "Partial" | "Complete";
+  tripStatus?: "Planned" | "In Transit" | "Delivered" | "Completed";
+  startDate?: string;
   endDate?: string;
-  expenses: ITripExpense[];
-  totalExpenses: number;
-  netProfit: number;
-  documents: {
+  expenses?: ITripExpense[];
+  totalExpenses?: number;
+  netProfit?: number;
+  documents?: {
     lrCopy?: string;
     invoice?: string;
     pod?: string;
     paymentReceipt?: string;
   };
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const TripExpenseSchema = new Schema<ITripExpense>({
@@ -46,27 +46,27 @@ const TripExpenseSchema = new Schema<ITripExpense>({
     required: true,
     enum: ["Fuel", "Toll", "Driver Advance", "Loading", "Unloading", "Repair", "RTO", "Other"],
   },
-  amount: { type: Number, required: true },
-  description: { type: String, required: true },
-  date: { type: String, required: true },
+  amount: { type: Number, default: 0 },
+  description: { type: String, default: "" },
+  date: { type: String, default: "" },
 });
 
 const TripSchema = new Schema<ITrip>(
   {
     tripId: { type: String, required: true, unique: true },
-    vehicleNo: { type: String, required: true },
-    truckId: { type: String, required: true },
-    driverId: { type: String, required: true },
-    driverName: { type: String, required: true },
-    origin: { type: String, required: true },
-    destination: { type: String, required: true },
-    consignment: { type: String, required: true },
-    material: { type: String, required: true },
-    freightRate: { type: Number, required: true },
-    quantity: { type: Number, required: true },
-    totalFare: { type: Number, required: true },
+    vehicleNo: { type: String, default: "" },
+    truckId: { type: String, default: "" },
+    driverId: { type: String, default: "" },
+    driverName: { type: String, default: "" },
+    origin: { type: String, default: "" },
+    destination: { type: String, default: "" },
+    consignment: { type: String, default: "" },
+    material: { type: String, default: "" },
+    freightRate: { type: Number, default: 0 },
+    quantity: { type: Number, default: 0 },
+    totalFare: { type: Number, default: 0 },
     advance: { type: Number, default: 0 },
-    pendingBalance: { type: Number, required: true },
+    pendingBalance: { type: Number, default: 0 },
     paymentStatus: {
       type: String,
       required: true,
@@ -79,16 +79,16 @@ const TripSchema = new Schema<ITrip>(
       enum: ["Planned", "In Transit", "Delivered", "Completed"],
       default: "Planned",
     },
-    startDate: { type: String, required: true },
-    endDate: { type: String },
+    startDate: { type: String, default: "" },
+    endDate: { type: String, default: "" },
     expenses: { type: [TripExpenseSchema], default: [] },
     totalExpenses: { type: Number, default: 0 },
     netProfit: { type: Number, default: 0 },
     documents: {
-      lrCopy: { type: String },
-      invoice: { type: String },
-      pod: { type: String },
-      paymentReceipt: { type: String },
+      lrCopy: { type: String, default: "" },
+      invoice: { type: String, default: "" },
+      pod: { type: String, default: "" },
+      paymentReceipt: { type: String, default: "" },
     },
   },
   { timestamps: true }

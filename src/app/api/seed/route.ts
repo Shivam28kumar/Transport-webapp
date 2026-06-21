@@ -4,6 +4,7 @@ import Truck from "@/models/truck";
 import Driver from "@/models/driver";
 import Trip from "@/models/trip";
 import Ledger from "@/models/ledger";
+import User from "@/models/user";
 import {
   trucks as mockTrucks,
   drivers as mockDrivers,
@@ -22,7 +23,16 @@ export async function POST() {
       Driver.deleteMany({}),
       Trip.deleteMany({}),
       Ledger.deleteMany({}),
+      User.deleteMany({}),
     ]);
+
+    // Seed default admin user
+    await User.create({
+      username: "admin",
+      password: "password123",
+      name: "Veltrix Admin",
+      role: "Admin"
+    });
 
     // Seed trucks
     const truckDocs = mockTrucks.map((t) => ({
