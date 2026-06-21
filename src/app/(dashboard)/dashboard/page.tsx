@@ -150,10 +150,51 @@ export default function DashboardPage() {
   }
 
   const kpiCards = [
-    { title: "Total Revenue", value: formatCurrency(stats.totalRevenue), change: "+12.5%", changeType: "positive" as const, icon: IndianRupee, gradient: "from-emerald-500 to-emerald-600", bgGlow: "shadow-emerald-500/20" },
-    { title: "Net Profit", value: formatCurrency(stats.netProfit), change: "+8.2%", changeType: "positive" as const, icon: TrendingUp, gradient: "from-blue-500 to-blue-600", bgGlow: "shadow-blue-500/20" },
-    { title: "Active Trucks", value: stats.activeTrucks.toString(), change: `of ${stats.totalTrucks} total`, changeType: "neutral" as const, icon: Truck, gradient: "from-violet-500 to-violet-600", bgGlow: "shadow-violet-500/20" },
-    { title: "Ongoing Trips", value: stats.ongoingTrips.toString(), change: "In transit", changeType: "neutral" as const, icon: Route, gradient: "from-amber-500 to-amber-600", bgGlow: "shadow-amber-500/20" },
+    {
+      title: "Total Revenue",
+      value: formatCurrency(stats.totalRevenue),
+      change: "Gross income",
+      icon: IndianRupee,
+      bgClass: "bg-gradient-to-br from-emerald-600 to-teal-800 text-white shadow-emerald-500/20",
+      textClass: "text-emerald-100/90",
+      iconBg: "bg-white/15",
+    },
+    {
+      title: "Total Expenses",
+      value: formatCurrency(stats.totalExpenses),
+      change: "Operational cost",
+      icon: ArrowDownRight,
+      bgClass: "bg-gradient-to-br from-rose-500 to-red-700 text-white shadow-rose-500/20",
+      textClass: "text-rose-100/90",
+      iconBg: "bg-white/15",
+    },
+    {
+      title: "Net Profit",
+      value: formatCurrency(stats.netProfit),
+      change: stats.totalRevenue > 0 ? `${((stats.netProfit / stats.totalRevenue) * 100).toFixed(0)}% margin` : "0% margin",
+      icon: TrendingUp,
+      bgClass: "bg-gradient-to-br from-indigo-600 to-violet-800 text-white shadow-indigo-500/20",
+      textClass: "text-indigo-100/90",
+      iconBg: "bg-white/15",
+    },
+    {
+      title: "Active Trucks",
+      value: stats.activeTrucks.toString(),
+      change: `of ${stats.totalTrucks} total`,
+      icon: Truck,
+      bgClass: "bg-gradient-to-br from-cyan-600 to-blue-800 text-white shadow-cyan-500/20",
+      textClass: "text-cyan-100/90",
+      iconBg: "bg-white/15",
+    },
+    {
+      title: "Ongoing Trips",
+      value: stats.ongoingTrips.toString(),
+      change: "In transit",
+      icon: Route,
+      bgClass: "bg-gradient-to-br from-amber-500 to-orange-700 text-white shadow-amber-500/20",
+      textClass: "text-amber-100/90",
+      iconBg: "bg-white/15",
+    },
   ];
 
   return (
@@ -174,31 +215,29 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {kpiCards.map((kpi) => (
-          <Card key={kpi.title} className={`relative overflow-hidden border-0 shadow-lg ${kpi.bgGlow} hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5`}>
+          <Card key={kpi.title} className={`relative overflow-hidden border-0 shadow-lg ${kpi.bgClass} hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5`}>
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{kpi.title}</p>
+                  <p className={`text-xs font-semibold ${kpi.textClass} uppercase tracking-wider`}>{kpi.title}</p>
                   <p className="text-2xl font-heading font-bold tracking-tight">{kpi.value}</p>
                   <div className="flex items-center gap-1">
-                    {kpi.changeType === "positive" && <ArrowUpRight className="w-3 h-3 text-emerald-500" />}
-                    <span className={`text-xs font-medium ${kpi.changeType === "positive" ? "text-emerald-600" : "text-muted-foreground"}`}>{kpi.change}</span>
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${kpi.iconBg} backdrop-blur-sm`}>{kpi.change}</span>
                   </div>
                 </div>
-                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${kpi.gradient} flex items-center justify-center shadow-lg`}>
+                <div className={`w-10 h-10 rounded-xl ${kpi.iconBg} flex items-center justify-center shadow-md backdrop-blur-md`}>
                   <kpi.icon className="w-5 h-5 text-white" />
                 </div>
               </div>
-              <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r ${kpi.gradient}`} />
             </CardContent>
           </Card>
         ))}
       </div>
 
       {/* AI Insight */}
-      <Card className="border border-sky-500/20 bg-gradient-to-r from-sky-50 to-blue-50">
+      <Card className="border-0 shadow-md bg-gradient-to-r from-sky-500/10 via-indigo-500/10 to-purple-500/10 border-l-4 border-sky-500">
         <CardContent className="p-5">
           <div className="flex flex-col sm:flex-row items-start gap-4">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center shadow-lg flex-shrink-0">
@@ -253,26 +292,26 @@ export default function DashboardPage() {
 
         <div className="space-y-4">
           <Card 
-            className="shadow-sm hover:shadow-md transition-all cursor-pointer border-amber-500/20 hover:border-amber-500/40 bg-amber-500/5 group"
+            className="border-0 shadow-lg shadow-amber-500/5 hover:shadow-amber-500/10 transition-all cursor-pointer bg-gradient-to-br from-amber-50 to-amber-100/50 border-l-4 border-amber-500 group"
             onClick={handleOpenOutstanding}
           >
             <CardHeader className="pb-2">
               <CardTitle className="font-heading text-base flex items-center justify-between">
                 <span>Outstanding Collection</span>
-                <span className="text-[10px] text-amber-600 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full font-sans font-normal opacity-0 group-hover:opacity-100 transition-opacity">View List →</span>
+                <span className="text-[10px] text-amber-700 bg-amber-200/60 dark:bg-amber-900/30 px-2 py-0.5 rounded-full font-sans font-normal opacity-0 group-hover:opacity-100 transition-opacity">View List →</span>
               </CardTitle>
               <CardDescription className="text-xs">Pending payments across fleet</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-end justify-between">
-                  <span className="text-2xl font-heading font-bold text-amber-600">{formatCurrency(stats.outstandingCollection)}</span>
-                  <AlertCircle className="w-4 h-4 text-amber-500" />
+                  <span className="text-2xl font-heading font-bold text-amber-700">{formatCurrency(stats.outstandingCollection)}</span>
+                  <AlertCircle className="w-4 h-4 text-amber-600" />
                 </div>
-                <div className="w-full bg-amber-100 rounded-full h-2.5">
-                  <div className="bg-gradient-to-r from-amber-400 to-amber-600 h-2.5 rounded-full transition-all duration-1000" style={{ width: `${stats.totalRevenue > 0 ? Math.min((stats.outstandingCollection / stats.totalRevenue) * 100, 100) : 0}%` }} />
+                <div className="w-full bg-amber-200 rounded-full h-2.5">
+                  <div className="bg-gradient-to-r from-amber-500 to-orange-500 h-2.5 rounded-full transition-all duration-1000" style={{ width: `${stats.totalRevenue > 0 ? Math.min((stats.outstandingCollection / stats.totalRevenue) * 100, 100) : 0}%` }} />
                 </div>
-                <p className="text-xs text-muted-foreground">{stats.totalRevenue > 0 ? ((stats.outstandingCollection / stats.totalRevenue) * 100).toFixed(1) : 0}% of total revenue is pending</p>
+                <p className="text-xs text-amber-700/80 font-medium">{stats.totalRevenue > 0 ? ((stats.outstandingCollection / stats.totalRevenue) * 100).toFixed(1) : 0}% of total revenue is pending</p>
               </div>
             </CardContent>
           </Card>

@@ -12,7 +12,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Username and password are required" }, { status: 400 });
     }
 
-    const user = await User.findOne({ username: username.toLowerCase() });
+    const user = await User.findOne({
+      username: { $regex: new RegExp("^" + username.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&") + "$", "i") }
+    });
     if (!user || user.password !== password) {
       return NextResponse.json({ error: "Invalid username or password" }, { status: 401 });
     }
