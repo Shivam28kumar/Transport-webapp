@@ -27,6 +27,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   Route,
   Search,
@@ -43,6 +52,8 @@ import {
   X,
   Edit,
   ArrowRight,
+  CalendarDays,
+  ChevronDown,
 } from "lucide-react";
 import { cn, formatCurrency, formatDate, getStatusColor } from "@/lib/utils";
 
@@ -81,6 +92,7 @@ export default function TripsPage() {
   const [editingTrip, setEditingTrip] = useState<any | null>(null);
   const [newTripStatus, setNewTripStatus] = useState("Planned");
   const [monthFilter, setMonthFilter] = useState("all");
+  const [isMonthOpen, setIsMonthOpen] = useState(false);
 
   const formatMonthYear = (monthStr: string) => {
     const [year, month] = monthStr.split("-");
@@ -292,17 +304,17 @@ export default function TripsPage() {
       </div>
 
       {/* Top Summaries (horizontal) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {[
           { label: "Total Revenue", value: formatCurrency(totalRevenue), color: "text-[#0B1F4D]" },
           { label: "Net Profit", value: formatCurrency(totalNetProfit), color: "text-[#2E9E44]" },
           { label: "Outstanding Fund", value: formatCurrency(totalPendingAmount), color: "text-[#F59E0B]" },
           { label: "Received Fund", value: formatCurrency(totalReceivedFund), color: "text-[#2E9E44]" },
         ].map((item) => (
-          <Card key={item.label} className="border border-[#E5E7EB] rounded-[20px] bg-white shadow-sm ring-0">
-            <CardContent className="p-4 flex flex-col justify-center">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.label}</span>
-              <span className={cn("text-lg md:text-xl font-heading font-black tracking-tight mt-1", item.color)}>
+          <Card key={item.label} className="border border-[#E5E7EB] rounded-[16px] sm:rounded-[20px] bg-white shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 ring-0">
+            <CardContent className="p-3 sm:p-4 flex flex-col justify-center min-w-0">
+              <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">{item.label}</span>
+              <span className={cn("text-base sm:text-lg md:text-xl font-heading font-black tracking-tight mt-1 truncate", item.color)}>
                 {item.value}
               </span>
             </CardContent>
@@ -342,34 +354,57 @@ export default function TripsPage() {
             ))}
           </div>
 
-          {/* Month scroller chips replaces the old dropdown select */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none max-w-full md:max-w-[450px]">
-            <Button
-              onClick={() => setMonthFilter("all")}
-              className={cn(
-                "h-9 px-4 rounded-full text-xs font-bold transition-all duration-200 shrink-0",
-                monthFilter === "all"
-                  ? "bg-[#0B1F4D] text-white hover:bg-[#0B1F4D]/90"
-                  : "border border-[#E5E7EB] text-slate-400 hover:text-[#0B1F4D] hover:bg-slate-50 bg-white"
-              )}
+          {/* Month filter: searchable dropdown */}
+          <Popover open={isMonthOpen} onOpenChange={setIsMonthOpen}>
+            <PopoverTrigger
+              render={
+                <Button
+                  className={cn(
+                    "h-9 px-4 rounded-full text-xs font-bold transition-all duration-200 gap-1.5 shrink-0",
+                    monthFilter !== "all"
+                      ? "bg-[#0B1F4D] text-white hover:bg-[#0B1F4D]/90"
+                      : "border border-[#E5E7EB] text-slate-500 hover:text-[#0B1F4D] hover:bg-slate-50 bg-white"
+                  )}
+                />
+              }
             >
-              All Months
-            </Button>
-            {uniqueMonths.map((m) => (
-              <Button
-                key={m}
-                onClick={() => setMonthFilter(m)}
-                className={cn(
-                  "h-9 px-4 rounded-full text-xs font-bold transition-all duration-200 shrink-0",
-                  monthFilter === m
-                    ? "bg-[#0B1F4D] text-white hover:bg-[#0B1F4D]/90"
-                    : "border border-[#E5E7EB] text-slate-400 hover:text-[#0B1F4D] hover:bg-slate-50 bg-white"
-                )}
-              >
-                {formatMonthYear(m)}
-              </Button>
-            ))}
-          </div>
+              <CalendarDays className="w-3.5 h-3.5" />
+              {monthFilter === "all" ? "All Months" : formatMonthYear(monthFilter)}
+              <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-52 p-0">
+              <Command>
+                <CommandInput placeholder="Search month..." />
+                <CommandList>
+                  <CommandEmpty>No month found.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      data-checked={monthFilter === "all"}
+                      onSelect={() => {
+                        setMonthFilter("all");
+                        setIsMonthOpen(false);
+                      }}
+                    >
+                      All Months
+                    </CommandItem>
+                    {uniqueMonths.map((m) => (
+                      <CommandItem
+                        key={m}
+                        value={formatMonthYear(m)}
+                        data-checked={monthFilter === m}
+                        onSelect={() => {
+                          setMonthFilter(m);
+                          setIsMonthOpen(false);
+                        }}
+                      >
+                        {formatMonthYear(m)}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 

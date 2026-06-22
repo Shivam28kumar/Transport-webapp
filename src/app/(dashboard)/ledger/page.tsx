@@ -231,10 +231,10 @@ export default function LedgerPage() {
             Unified billing records and itemized operational expenses
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-row sm:items-center gap-3">
           {/* Add Income Dialog */}
           <Dialog open={isIncomeDialogOpen} onOpenChange={setIsIncomeDialogOpen}>
-            <DialogTrigger render={<Button className="h-[52px] rounded-[14px] bg-[#2E9E44] hover:bg-[#2E9E44]/90 text-white font-bold px-6 gap-2" />}>
+            <DialogTrigger render={<Button className="flex-1 sm:flex-initial h-[48px] sm:h-[52px] rounded-[14px] bg-[#2E9E44] hover:bg-[#2E9E44]/90 text-white font-bold px-4 sm:px-6 gap-2 text-sm" />}>
               <Plus className="w-5 h-5" /> Add Income
             </DialogTrigger>
             <DialogContent className="max-w-md rounded-[20px] bg-white border border-[#E5E7EB] text-[#0B1F4D]">
@@ -352,7 +352,7 @@ export default function LedgerPage() {
 
           {/* Add Expense Dialog */}
           <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
-            <DialogTrigger render={<Button className="h-[52px] rounded-[14px] bg-[#EF4444] hover:bg-[#EF4444]/90 text-white font-bold px-6 gap-2" />}>
+            <DialogTrigger render={<Button className="flex-1 sm:flex-initial h-[48px] sm:h-[52px] rounded-[14px] bg-[#EF4444] hover:bg-[#EF4444]/90 text-white font-bold px-4 sm:px-6 gap-2 text-sm" />}>
               <Plus className="w-5 h-5" /> Add Expense
             </DialogTrigger>
             <DialogContent className="max-w-lg rounded-[20px] bg-white border border-[#E5E7EB] text-[#0B1F4D]">
@@ -476,20 +476,20 @@ export default function LedgerPage() {
       </div>
 
       {/* Summary Cards with rounded-2xl (20px) corners */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-6">
         {[
           { label: "Total Revenue", value: formatCurrency(totalIncome), color: "text-[#2E9E44]", circleBg: "bg-emerald-50 text-emerald-600", icon: TrendingUp },
           { label: "Total Expenses", value: formatCurrency(totalExpenses), color: "text-[#EF4444]", circleBg: "bg-red-50 text-red-500", icon: TrendingDown },
           { label: "Net Balance", value: formatCurrency(netBalance), color: netBalance >= 0 ? "text-[#0B1F4D]" : "text-rose-600", circleBg: "bg-[#0B1F4D]/10 text-[#0B1F4D]", icon: Wallet },
         ].map((card) => (
-          <Card key={card.label} className="border border-[#E5E7EB] rounded-[20px] bg-white shadow-sm ring-0">
-            <CardContent className="p-5 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{card.label}</p>
-                <p className={cn("text-xl md:text-2xl font-heading font-black tracking-tight mt-1", card.color)}>{card.value}</p>
+          <Card key={card.label} className="border border-[#E5E7EB] rounded-[16px] sm:rounded-[20px] bg-white shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 ring-0">
+            <CardContent className="p-3.5 sm:p-5 flex items-center justify-between gap-2 sm:gap-4">
+              <div className="min-w-0">
+                <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">{card.label}</p>
+                <p className={cn("text-base sm:text-xl md:text-2xl font-heading font-black tracking-tight mt-1 truncate", card.color)}>{card.value}</p>
               </div>
-              <div className={cn("w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-sm", card.circleBg)}>
-                <card.icon className="w-5 h-5" />
+              <div className={cn("w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 shadow-sm", card.circleBg)}>
+                <card.icon className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
             </CardContent>
           </Card>

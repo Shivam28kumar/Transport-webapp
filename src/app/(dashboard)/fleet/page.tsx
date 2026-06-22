@@ -332,18 +332,18 @@ export default function FleetPage() {
       </div>
 
       {/* Top KPI Cards (Horizontal with icons in circular background) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {kpis.map((kpi) => (
-          <Card key={kpi.label} className="border border-[#E5E7EB] rounded-[20px] bg-white shadow-sm ring-0">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className={cn("w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0", kpi.bg)}>
-                <kpi.icon className={cn("w-6 h-6", kpi.color)} />
+          <Card key={kpi.label} className="border border-[#E5E7EB] rounded-[16px] sm:rounded-[20px] bg-white shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 ring-0">
+            <CardContent className="p-3.5 sm:p-5 flex items-center gap-2.5 sm:gap-4">
+              <div className={cn("w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0", kpi.bg)}>
+                <kpi.icon className={cn("w-5 h-5 sm:w-6 sm:h-6", kpi.color)} />
               </div>
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+              <div className="min-w-0">
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block truncate">
                   {kpi.label}
                 </span>
-                <span className={cn("text-2xl font-heading font-black tracking-tight mt-0.5 block", kpi.color)}>
+                <span className={cn("text-lg sm:text-2xl font-heading font-black tracking-tight mt-0.5 block", kpi.color)}>
                   {kpi.value}
                 </span>
               </div>

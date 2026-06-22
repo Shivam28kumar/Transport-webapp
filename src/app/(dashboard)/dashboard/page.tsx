@@ -124,8 +124,8 @@ export default function DashboardPage() {
           <Skeleton className="h-10 w-48" />
           <Skeleton className="h-6 w-32" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28 rounded-[20px]" />)}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24 sm:h-28 rounded-[16px] sm:rounded-[20px]" />)}
         </div>
         <Skeleton className="h-32 rounded-[20px]" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -209,17 +209,17 @@ export default function DashboardPage() {
       </div>
 
       {/* Section 1: Four horizontal KPI cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {kpiCards.map((kpi) => (
-          <Card key={kpi.title} className="border border-[#E5E7EB] rounded-[20px] shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 ring-0 bg-white">
-            <CardContent className="p-5 flex items-center justify-between gap-4">
-              <div className="space-y-1">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{kpi.title}</p>
-                <p className="text-xl md:text-2xl font-heading font-black tracking-tight text-[#0B1F4D]">{kpi.value}</p>
-                <p className="text-[11px] text-slate-400 font-medium">{kpi.subtitle}</p>
+          <Card key={kpi.title} className="border border-[#E5E7EB] rounded-[16px] sm:rounded-[20px] shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 ring-0 bg-white">
+            <CardContent className="p-3.5 sm:p-5 flex items-center justify-between gap-2 sm:gap-4">
+              <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">{kpi.title}</p>
+                <p className="text-base sm:text-xl md:text-2xl font-heading font-black tracking-tight text-[#0B1F4D] truncate">{kpi.value}</p>
+                <p className="text-[9px] sm:text-[11px] text-slate-400 font-medium truncate">{kpi.subtitle}</p>
               </div>
-              <div className={cn("w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-sm", kpi.circleBg)}>
-                <kpi.icon className="w-5 h-5" />
+              <div className={cn("w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 shadow-sm", kpi.circleBg)}>
+                <kpi.icon className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
             </CardContent>
           </Card>
