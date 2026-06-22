@@ -5,8 +5,31 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lock, User, AlertCircle, Loader2 } from "lucide-react";
+import { Logo } from "@/components/brand/logo";
+import {
+  Lock,
+  User,
+  AlertCircle,
+  Loader2,
+  Leaf,
+  Truck,
+  TrendingUp,
+  Handshake,
+  Route,
+} from "lucide-react";
+
+const featurePills = [
+  { label: "Logistics", icon: Truck },
+  { label: "Bioenergy", icon: Leaf },
+  { label: "Sustainable Future", icon: Route },
+];
+
+const trustBadges = [
+  { label: "Sustainable", desc: "Eco-friendly & renewable future", icon: Leaf },
+  { label: "Reliable", desc: "Strong logistics network", icon: Truck },
+  { label: "Growth", desc: "Built for today, ready for tomorrow", icon: TrendingUp },
+  { label: "Trust", desc: "Integrity, transparency & commitment", icon: Handshake },
+];
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -49,85 +72,139 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#030712] relative overflow-hidden px-4">
-      {/* Background Decorative Blobs */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-600/10 rounded-full blur-[100px] pointer-events-none" />
+    <div className="min-h-screen flex bg-[#F4F7FA]">
+      {/* Left Brand Panel */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden brand-hero-gradient flex-col justify-between p-12">
+        <div className="absolute top-1/3 -left-24 w-72 h-72 bg-[#3fae57]/10 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#d4af6a]/10 rounded-full blur-[110px] pointer-events-none" />
 
-      <Card className="w-full max-w-md shadow-2xl border-slate-800 bg-[#090d16]/80 backdrop-blur-xl relative z-10">
-        <CardHeader className="space-y-1 text-center pt-8">
-          <div className="mx-auto w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 mb-3">
-            <Lock className="w-6 h-6 text-white" />
+        <Logo markSize={44} inverted tagline />
+
+        <div className="relative z-10 space-y-8 max-w-md">
+          <h1 className="font-heading text-4xl font-black text-white leading-tight tracking-tight">
+            Enterprise logistics,
+            <br />
+            engineered for scale.
+          </h1>
+          <p className="text-sm text-slate-300 leading-relaxed">
+            One cockpit for fleet operations, dispatch, and finance — built for
+            transport and bioenergy businesses that move fast and stay accountable.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {featurePills.map((pill) => (
+              <span
+                key={pill.label}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/15 text-xs font-semibold text-white backdrop-blur-sm"
+              >
+                <pill.icon className="w-3.5 h-3.5 text-emerald-300" />
+                {pill.label}
+              </span>
+            ))}
           </div>
-          <CardTitle className="font-heading text-2xl font-bold tracking-tight text-white">
-            Veltrix Group
-          </CardTitle>
-          <CardDescription className="text-slate-400">
-            Logistics & Fleet Management Console
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pb-8">
-          <form onSubmit={handleLogin} className="space-y-4">
-            {error && (
-              <div className="p-3 bg-red-950/50 border border-red-800/40 rounded-lg flex items-start gap-2 text-xs text-red-400 animate-in fade-in slide-in-from-top-1">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{error}</span>
-              </div>
-            )}
+        </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs text-slate-300">Username</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <Input
-                  type="text"
-                  placeholder="admin"
-                  className="pl-9 h-10 bg-slate-900/50 border-slate-800 text-white placeholder-slate-500 focus-visible:ring-blue-500 focus-visible:border-blue-500"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  disabled={loading}
-                />
+        <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {trustBadges.map((badge) => (
+            <div key={badge.label} className="space-y-1.5">
+              <div className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center">
+                <badge.icon className="w-4 h-4 text-emerald-300" />
               </div>
+              <p className="text-xs font-bold text-white">{badge.label}</p>
+              <p className="text-[10px] text-slate-400 leading-snug">{badge.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right Form Panel */}
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-10 relative">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#1f8a4c]/5 rounded-full blur-3xl pointer-events-none lg:hidden" />
+
+        <div className="w-full max-w-md relative z-10 space-y-8">
+          {/* Mobile-only brand header */}
+          <div className="lg:hidden flex flex-col items-center text-center gap-2">
+            <Logo markSize={44} tagline />
+          </div>
+
+          <div className="bg-white border border-[#E5E7EB] rounded-[20px] shadow-xl shadow-[#0B1F4D]/5 p-8">
+            <div className="text-center mb-6 space-y-1">
+              <h2 className="font-heading text-xl font-black text-[#0B1F4D]">
+                Welcome back
+              </h2>
+              <p className="text-sm text-slate-400 font-medium">
+                Sign in to the Logistics &amp; Fleet Management Console
+              </p>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs text-slate-300">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  className="pl-9 h-10 bg-slate-900/50 border-slate-800 text-white placeholder-slate-500 focus-visible:ring-blue-500 focus-visible:border-blue-500"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full h-10 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium shadow-lg shadow-blue-600/20"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Logging in...
-                </>
-              ) : (
-                "Access Dashboard"
+            <form onSubmit={handleLogin} className="space-y-4">
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 text-xs text-red-600 font-medium animate-in fade-in slide-in-from-top-1">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{error}</span>
+                </div>
               )}
-            </Button>
-          </form>
 
-          <div className="mt-6 border-t border-slate-800/80 pt-4 text-center">
-            <p className="text-[10px] text-slate-500 leading-relaxed">
-              Authorized personnel only. Create login credentials directly inside the MongoDB database <code className="text-slate-400 font-mono">users</code> collection to grant console access.
-            </p>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-[#0B1F4D]">Username</Label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input
+                    type="text"
+                    placeholder="admin"
+                    className="pl-10 h-11 bg-white border-[#E5E7EB] rounded-xl text-[#0B1F4D] placeholder-slate-400 focus-visible:ring-[#1f8a4c]/40 focus-visible:border-[#1f8a4c]"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-[#0B1F4D]">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    className="pl-10 h-11 bg-white border-[#E5E7EB] rounded-xl text-[#0B1F4D] placeholder-slate-400 focus-visible:ring-[#1f8a4c]/40 focus-visible:border-[#1f8a4c]"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full h-12 bg-[#0B1F4D] hover:bg-[#0B1F4D]/90 text-white font-bold rounded-xl shadow-lg shadow-[#0B1F4D]/20 mt-2"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Logging in...
+                  </>
+                ) : (
+                  "Access Dashboard"
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-6 border-t border-slate-100 pt-4 text-center">
+              <p className="text-[10px] text-slate-400 leading-relaxed">
+                Authorized personnel only. Create login credentials directly inside
+                the MongoDB database{" "}
+                <code className="text-slate-500 font-mono">users</code> collection
+                to grant console access.
+              </p>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+
+          <p className="text-center text-[11px] text-slate-400 font-medium">
+            © {new Date().getFullYear()} Veltrix Group — Logistics · Bioenergy · Sustainable Future
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

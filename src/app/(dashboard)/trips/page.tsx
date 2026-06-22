@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -37,15 +37,14 @@ import {
   TrendingUp,
   Package,
   Clock,
-  FileText,
   CheckCircle2,
   AlertCircle,
   Receipt,
   X,
   Edit,
+  ArrowRight,
 } from "lucide-react";
 import { cn, formatCurrency, formatDate, getStatusColor } from "@/lib/utils";
-import { useEffect } from "react";
 
 interface NewExpense {
   category: string;
@@ -86,7 +85,7 @@ export default function TripsPage() {
   const formatMonthYear = (monthStr: string) => {
     const [year, month] = monthStr.split("-");
     const date = new Date(Number(year), Number(month) - 1, 1);
-    return date.toLocaleString("default", { month: "long", year: "numeric" });
+    return date.toLocaleString("default", { month: "short", year: "2-digit" });
   };
 
   const handleStartEditTrip = (trip: any) => {
@@ -135,7 +134,6 @@ export default function TripsPage() {
 
     try {
       setIsSavingTrip(true);
-      
       const isEdit = !!editingTrip;
       const payload = {
         origin: newOrigin || "",
@@ -203,8 +201,13 @@ export default function TripsPage() {
       (trip.destination || "").toLowerCase().includes(search.toLowerCase()) ||
       (trip.vehicleNo || "").toLowerCase().includes(search.toLowerCase()) ||
       (trip.consignment || "").toLowerCase().includes(search.toLowerCase());
+    
+    // Status Filter Chip mapping
     const matchesStatus =
-      statusFilter === "all" || trip.tripStatus === statusFilter;
+      statusFilter === "all" ||
+      (statusFilter === "Ongoing" && trip.tripStatus === "In Transit") ||
+      (statusFilter === "Completed" && (trip.tripStatus === "Completed" || trip.tripStatus === "Delivered")) ||
+      (statusFilter === "Planned" && trip.tripStatus === "Planned");
     
     let matchesMonth = true;
     if (monthFilter !== "all" && trip.startDate) {
@@ -257,811 +260,685 @@ export default function TripsPage() {
     setNewExpenses(newExpenses.filter((_, i) => i !== index));
   };
 
-  const getDocDot = (doc: string | undefined) => (
-    <div
-      className={cn(
-        "w-2 h-2 rounded-full",
-        doc ? "bg-emerald-500" : "bg-gray-300"
-      )}
-    />
-  );
-
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-3">
-        <span className="w-6 h-6 rounded-full border-2 border-[#0a192f] border-t-transparent animate-spin" />
-        <p className="text-sm text-muted-foreground font-heading">Loading trip dispatches...</p>
+        <span className="w-6 h-6 rounded-full border-2 border-[#0B1F4D] border-t-transparent animate-spin" />
+        <p className="text-sm text-slate-500 font-heading">Loading logistics data...</p>
       </div>
     );
   }
 
+  // Filter chips options
+  const statusChips = [
+    { key: "all", label: "All Dispatches" },
+    { key: "Planned", label: "Planned" },
+    { key: "Ongoing", label: "Ongoing" },
+    { key: "Completed", label: "Completed" },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative pb-16">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="font-heading text-2xl md:text-3xl font-bold tracking-tight">
-            Trip Management
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Industrial dispatch, freight calculations & profit audit
+          <h2 className="font-heading text-2xl md:text-3xl font-black text-[#0B1F4D]">
+            Trip Dispatch
+          </h2>
+          <p className="text-xs text-slate-400 font-medium mt-1">
+            Dispatch, route logistics, and freight profitability logs
           </p>
         </div>
-            <Dialog 
-              open={isCreateDialogOpen} 
-              onOpenChange={(open) => {
-                setIsCreateDialogOpen(open);
-                if (!open) {
-                  setEditingTrip(null);
-                  setNewOrigin("");
-                  setNewDestination("");
-                  setNewConsignment("");
-                  setNewMaterial("");
-                  setNewStartDate("");
-                  setSelectedTruckId("");
-                  setSelectedDriverId("");
-                  setFreightRate("");
-                  setQuantity("");
-                  setAdvance("");
-                  setNewExpenses([]);
-                  setNewTripStatus("Planned");
-                }
-              }}
+      </div>
+
+      {/* Top Summaries (horizontal) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: "Total Revenue", value: formatCurrency(totalRevenue), color: "text-[#0B1F4D]" },
+          { label: "Net Profit", value: formatCurrency(totalNetProfit), color: "text-[#2E9E44]" },
+          { label: "Outstanding Fund", value: formatCurrency(totalPendingAmount), color: "text-[#F59E0B]" },
+          { label: "Received Fund", value: formatCurrency(totalReceivedFund), color: "text-[#2E9E44]" },
+        ].map((item) => (
+          <Card key={item.label} className="border border-[#E5E7EB] rounded-[20px] bg-white shadow-sm ring-0">
+            <CardContent className="p-4 flex flex-col justify-center">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.label}</span>
+              <span className={cn("text-lg md:text-xl font-heading font-black tracking-tight mt-1", item.color)}>
+                {item.value}
+              </span>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Search & Status Filters */}
+      <div className="space-y-4">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            placeholder="Search by Trip ID, route, vehicle number, customer..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 h-11 text-sm bg-white border-[#E5E7EB] rounded-[12px] shadow-sm text-[#0B1F4D] placeholder-slate-400"
+          />
+        </div>
+
+        {/* Filter chips bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+          {/* Status chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            {statusChips.map((chip) => (
+              <Button
+                key={chip.key}
+                onClick={() => setStatusFilter(chip.key)}
+                className={cn(
+                  "h-9 px-4 rounded-full text-xs font-bold transition-all duration-200 shrink-0",
+                  statusFilter === chip.key
+                    ? "bg-[#0B1F4D] text-white hover:bg-[#0B1F4D]/90"
+                    : "border border-[#E5E7EB] text-slate-400 hover:text-[#0B1F4D] hover:bg-slate-50 bg-white"
+                )}
+              >
+                {chip.label}
+              </Button>
+            ))}
+          </div>
+
+          {/* Month scroller chips replaces the old dropdown select */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none max-w-full md:max-w-[450px]">
+            <Button
+              onClick={() => setMonthFilter("all")}
+              className={cn(
+                "h-9 px-4 rounded-full text-xs font-bold transition-all duration-200 shrink-0",
+                monthFilter === "all"
+                  ? "bg-[#0B1F4D] text-white hover:bg-[#0B1F4D]/90"
+                  : "border border-[#E5E7EB] text-slate-400 hover:text-[#0B1F4D] hover:bg-slate-50 bg-white"
+              )}
             >
-              <DialogTrigger
-                render={
-                  <Button
-                    size="sm"
-                    className="gap-1.5 bg-gradient-to-r from-[#0a192f] to-[#1d3461] hover:from-[#112240] hover:to-[#0a192f]"
-                    onClick={() => {
-                      setEditingTrip(null);
-                      setNewOrigin("");
-                      setNewDestination("");
-                      setNewConsignment("");
-                      setNewMaterial("");
-                      setNewStartDate("");
-                      setSelectedTruckId("");
-                      setSelectedDriverId("");
-                      setFreightRate("");
-                      setQuantity("");
-                      setAdvance("");
-                      setNewExpenses([]);
-                      setNewTripStatus("Planned");
-                    }}
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Create Trip
-                  </Button>
-                }
-              />
-              <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="font-heading">
-                    {editingTrip ? "Edit Trip" : "Create New Trip"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {editingTrip ? "Modify this dispatch's details and freight pricing." : "Configure dispatch details, freight, and expenses."}
-                  </DialogDescription>
-                </DialogHeader>
-            <div className="space-y-4 py-4">
-              {/* Dual Column Form */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-xs">Origin</Label>
-                    <Input
-                      placeholder="e.g. Jamshedpur"
-                      className="mt-1 h-9 text-sm"
-                      value={newOrigin}
-                      onChange={(e) => setNewOrigin(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Destination</Label>
-                    <Input
-                      placeholder="e.g. Kolkata"
-                      className="mt-1 h-9 text-sm"
-                      value={newDestination}
-                      onChange={(e) => setNewDestination(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Consignment</Label>
-                    <Input
-                      placeholder="e.g. Tata Steel Ltd."
-                      className="mt-1 h-9 text-sm"
-                      value={newConsignment}
-                      onChange={(e) => setNewConsignment(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Material</Label>
-                    <Input
-                      placeholder="e.g. HR Coils"
-                      className="mt-1 h-9 text-sm"
-                      value={newMaterial}
-                      onChange={(e) => setNewMaterial(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Start Date</Label>
-                    <Input
-                      type="date"
-                      className="mt-1 h-9 text-sm"
-                      value={newStartDate}
-                      onChange={(e) => setNewStartDate(e.target.value)}
-                    />
-                  </div>
-                  {editingTrip && (
-                    <div>
-                      <Label className="text-xs">Trip Status</Label>
-                      <Select value={newTripStatus} onValueChange={(val) => setNewTripStatus(val || "")}>
-                        <SelectTrigger className="mt-1 h-9 text-sm">
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Planned">Planned</SelectItem>
-                          <SelectItem value="In Transit">In Transit</SelectItem>
-                          <SelectItem value="Delivered">Delivered</SelectItem>
-                          <SelectItem value="Completed">Completed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </div>
+              All Months
+            </Button>
+            {uniqueMonths.map((m) => (
+              <Button
+                key={m}
+                onClick={() => setMonthFilter(m)}
+                className={cn(
+                  "h-9 px-4 rounded-full text-xs font-bold transition-all duration-200 shrink-0",
+                  monthFilter === m
+                    ? "bg-[#0B1F4D] text-white hover:bg-[#0B1F4D]/90"
+                    : "border border-[#E5E7EB] text-slate-400 hover:text-[#0B1F4D] hover:bg-slate-50 bg-white"
+                )}
+              >
+                {formatMonthYear(m)}
+              </Button>
+            ))}
+          </div>
+        </div>
+      </div>
 
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-xs">Select Truck</Label>
-                    <Select value={selectedTruckId} onValueChange={(val) => setSelectedTruckId(val || "")}>
-                      <SelectTrigger className="mt-1 h-9 text-sm">
-                        <SelectValue placeholder="Select vehicle" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {trucksList.map((t) => (
-                          <SelectItem key={t._id} value={t._id}>
-                            {t.vehicleNo} ({t.type})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Select Driver</Label>
-                    <Select value={selectedDriverId} onValueChange={(val) => setSelectedDriverId(val || "")}>
-                      <SelectTrigger className="mt-1 h-9 text-sm">
-                        <SelectValue placeholder="Select driver" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {driversList.map((d) => (
-                          <SelectItem key={d._id} value={d._id}>
-                            {d.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-xs">Freight Rate (₹/Ton)</Label>
-                      <Input
-                        type="number"
-                        placeholder="3200"
-                        value={freightRate}
-                        onChange={(e) => setFreightRate(e.target.value)}
-                        className="mt-1 h-9 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Quantity (Tons)</Label>
-                      <Input
-                        type="number"
-                        placeholder="32"
-                        value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
-                        className="mt-1 h-9 text-sm"
-                      />
-                    </div>
-                  </div>
-                  {/* Auto-calculated fields */}
-                  <div className="p-3 bg-muted/50 rounded-lg space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Total Fare</span>
-                      <span className="font-heading font-bold text-emerald-600">
-                        {formatCurrency(calcTotalFare)}
-                      </span>
-                    </div>
-                    <Separator />
-                    <div>
-                      <Label className="text-xs">Advance Amount</Label>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        value={advance}
-                        onChange={(e) => setAdvance(e.target.value)}
-                        className="mt-1 h-9 text-sm"
-                      />
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Pending Balance
-                      </span>
-                      <span className="font-mono font-medium text-amber-600">
-                        {formatCurrency(Math.max(0, calcPending))}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm items-center">
-                      <span className="text-muted-foreground">
-                        Payment Status
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "text-[10px]",
-                          getStatusColor(calcPaymentStatus)
-                        )}
-                      >
-                        {calcPaymentStatus}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
+      {/* Cards list separated by 24px space */}
+      <div className="space-y-6 pt-2">
+        {filteredTrips.length === 0 ? (
+          <Card className="border border-[#E5E7EB] rounded-[20px] bg-white py-12 text-center shadow-sm">
+            <CardContent className="space-y-3">
+              <AlertCircle className="w-10 h-10 text-slate-300 mx-auto" />
+              <p className="text-sm font-semibold text-slate-500">No active dispatches found matching filters</p>
+            </CardContent>
+          </Card>
+        ) : (
+          filteredTrips.map((trip) => {
+            // Extract Diesel (Fuel) expense
+            const dieselCost = (trip.expenses || [])
+              .filter((e: any) => e.category === "Fuel")
+              .reduce((sum: number, e: any) => sum + (Number(e.amount) || 0), 0);
 
-              <Separator />
-
-              {/* Embedded Expenses */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-heading font-semibold text-sm flex items-center gap-2">
-                    <Receipt className="w-4 h-4" /> Trip Expenses
-                  </h4>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addExpenseRow}
-                    className="text-xs gap-1"
-                  >
-                    <Plus className="w-3 h-3" /> Add Expense
-                  </Button>
-                </div>
-                {newExpenses.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-4 bg-muted/30 rounded-lg">
-                    No expenses added yet. Click &quot;Add Expense&quot; to
-                    begin.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {newExpenses.map((exp, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <Select
-                          value={exp.category}
-                          onValueChange={(val) => {
-                            const updated = [...newExpenses];
-                            updated[idx].category = val || "";
-                            setNewExpenses(updated);
-                          }}
+            return (
+              <Card
+                key={trip._id || trip.id}
+                className="border border-[#E5E7EB] rounded-[20px] shadow-sm hover:shadow-md transition-all duration-300 bg-white overflow-hidden group cursor-pointer ring-0"
+                onClick={() => setSelectedTrip(trip)}
+              >
+                <CardContent className="p-6 space-y-4">
+                  {/* Status, Truck & Customer Row */}
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-slate-400">
+                          {trip.tripId || trip.id}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[8px] font-bold rounded-full py-0.5 px-2",
+                            getStatusColor(trip.tripStatus)
+                          )}
                         >
-                          <SelectTrigger className="h-8 text-xs w-[130px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[
-                              "Fuel",
-                              "Toll",
-                              "Driver Advance",
-                              "Loading",
-                              "Unloading",
-                              "Repair",
-                              "RTO",
-                              "Other",
-                            ].map((c) => (
-                              <SelectItem key={c} value={c}>
-                                {c}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          type="number"
-                          placeholder="Amount"
-                          value={exp.amount}
-                          onChange={(e) => {
-                            const updated = [...newExpenses];
-                            updated[idx].amount = e.target.value;
-                            setNewExpenses(updated);
-                          }}
-                          className="h-8 text-xs w-[100px]"
-                        />
-                        <Input
-                          placeholder="Description"
-                          value={exp.description}
-                          onChange={(e) => {
-                            const updated = [...newExpenses];
-                            updated[idx].description = e.target.value;
-                            setNewExpenses(updated);
-                          }}
-                          className="h-8 text-xs flex-1"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeExpenseRow(idx)}
-                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                          {trip.tripStatus}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[8px] font-bold rounded-full py-0.5 px-2",
+                            getStatusColor(trip.paymentStatus)
+                          )}
                         >
-                          <X className="w-3 h-3" />
-                        </Button>
+                          {trip.paymentStatus}
+                        </Badge>
                       </div>
-                    ))}
+                      <h3 className="font-heading font-black text-lg text-[#0B1F4D] tracking-tight mt-1 flex items-center gap-2">
+                        <Truck className="w-4 h-4 text-slate-500" /> {trip.vehicleNo || "Unassigned"}
+                      </h3>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Customer</p>
+                      <p className="text-sm font-bold text-[#0B1F4D]">{trip.consignment || "N/A"}</p>
+                    </div>
+                  </div>
+
+                  <Separator className="bg-slate-100" />
+
+                  {/* Route & Driver Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                    {/* Origin to Destination */}
+                    <div className="flex items-center gap-3">
+                      <div className="bg-[#0B1F4D]/5 p-2 rounded-lg">
+                        <Route className="w-4 h-4 text-[#0B1F4D]" />
+                      </div>
+                      <div>
+                        <div className="text-[9px] font-bold text-slate-400 uppercase">Route</div>
+                        <div className="text-xs font-semibold text-[#0B1F4D] flex items-center gap-1.5 mt-0.5">
+                          <span>{trip.origin || "N/A"}</span>
+                          <ArrowRight className="w-3 h-3 text-slate-400" />
+                          <span>{trip.destination || "N/A"}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Driver */}
+                    <div className="flex items-center gap-3">
+                      <div className="bg-[#0B1F4D]/5 p-2 rounded-lg">
+                        <User className="w-4 h-4 text-[#0B1F4D]" />
+                      </div>
+                      <div>
+                        <div className="text-[9px] font-bold text-slate-400 uppercase">Driver</div>
+                        <div className="text-xs font-semibold text-[#0B1F4D] mt-0.5">{trip.driverName || "Unassigned"}</div>
+                      </div>
+                    </div>
+
+                    {/* Trip Date */}
+                    <div className="flex items-center gap-3">
+                      <div className="bg-[#0B1F4D]/5 p-2 rounded-lg">
+                        <Clock className="w-4 h-4 text-[#0B1F4D]" />
+                      </div>
+                      <div>
+                        <div className="text-[9px] font-bold text-slate-400 uppercase">Dispatch Date</div>
+                        <div className="text-xs font-semibold text-[#0B1F4D] mt-0.5">{formatDate(trip.startDate)}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator className="bg-slate-100" />
+
+                  {/* Pricing Financial Details */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-center bg-slate-50 p-4 rounded-xl">
+                    <div>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">Total Fare</p>
+                      <p className="text-xs font-bold text-[#0B1F4D] mt-0.5">{formatCurrency(trip.totalFare || 0)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">Advance</p>
+                      <p className="text-xs font-mono font-bold text-emerald-600 mt-0.5">{formatCurrency(trip.advance || 0)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">Pending</p>
+                      <p className="text-xs font-mono font-bold text-[#F59E0B] mt-0.5">{formatCurrency(trip.pendingBalance || 0)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">Diesel Exp</p>
+                      <p className="text-xs font-mono font-bold text-rose-500 mt-0.5">{formatCurrency(dieselCost)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">Total Exp</p>
+                      <p className="text-xs font-mono font-bold text-[#EF4444] mt-0.5">{formatCurrency(trip.totalExpenses || 0)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">Net Profit</p>
+                      <p className={cn(
+                        "text-xs font-heading font-black mt-0.5",
+                        (trip.netProfit || 0) >= 0 ? "text-[#2E9E44]" : "text-rose-600"
+                      )}>
+                        {formatCurrency(trip.netProfit || 0)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Actions summary footer */}
+                  <div className="flex items-center justify-between pt-2">
+                    <p className="text-[10px] text-slate-400 font-semibold uppercase">
+                      Load Audit: {trip.quantity || 0} Tons @ ₹{trip.freightRate || 0}/Ton
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 hover:bg-slate-100 text-[#0B1F4D] text-xs font-bold gap-1 rounded-lg"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartEditTrip(trip);
+                      }}
+                    >
+                      <Edit className="w-3.5 h-3.5" /> Edit Dispatch
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
+      </div>
+
+      {/* Floating Create Trip FAB (bottom right) */}
+      <Dialog 
+        open={isCreateDialogOpen} 
+        onOpenChange={(open) => {
+          setIsCreateDialogOpen(open);
+          if (!open) {
+            setEditingTrip(null);
+            setNewOrigin("");
+            setNewDestination("");
+            setNewConsignment("");
+            setNewMaterial("");
+            setNewStartDate("");
+            setSelectedTruckId("");
+            setSelectedDriverId("");
+            setFreightRate("");
+            setQuantity("");
+            setAdvance("");
+            setNewExpenses([]);
+            setNewTripStatus("Planned");
+          }
+        }}
+      >
+        <DialogTrigger
+          render={
+            <Button
+              className="fixed bottom-24 right-6 z-40 bg-[#0B1F4D] text-white hover:bg-[#0B1F4D]/90 h-14 w-14 rounded-full shadow-xl shadow-[#0B1F4D]/35 flex items-center justify-center scale-100 hover:scale-105 active:scale-95 transition-all"
+              onClick={() => {
+                setEditingTrip(null);
+                setNewOrigin("");
+                setNewDestination("");
+                setNewConsignment("");
+                setNewMaterial("");
+                setNewStartDate("");
+                setSelectedTruckId("");
+                setSelectedDriverId("");
+                setFreightRate("");
+                setQuantity("");
+                setAdvance("");
+                setNewExpenses([]);
+                setNewTripStatus("Planned");
+              }}
+            />
+          }
+        >
+          <Plus className="w-6 h-6 text-white" />
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-[20px] bg-white border border-[#E5E7EB] text-[#0B1F4D]">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-lg font-black text-[#0B1F4D]">
+              {editingTrip ? "Edit Trip Dispatch" : "Create New Dispatch"}
+            </DialogTitle>
+            <DialogDescription className="text-slate-400 font-medium">
+              Configure dispatch details, freight rates, asset assignments, and advance payments.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs font-bold text-[#0B1F4D]">Origin Route</Label>
+                  <Input
+                    placeholder="e.g. Jamshedpur"
+                    className="mt-1 h-11 text-sm bg-white border-[#E5E7EB] rounded-[10px] text-[#0B1F4D] placeholder-slate-400"
+                    value={newOrigin}
+                    onChange={(e) => setNewOrigin(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-bold text-[#0B1F4D]">Destination Route</Label>
+                  <Input
+                    placeholder="e.g. Kolkata"
+                    className="mt-1 h-11 text-sm bg-white border-[#E5E7EB] rounded-[10px] text-[#0B1F4D] placeholder-slate-400"
+                    value={newDestination}
+                    onChange={(e) => setNewDestination(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-bold text-[#0B1F4D]">Customer (Consignment)</Label>
+                  <Input
+                    placeholder="e.g. Tata Steel Ltd."
+                    className="mt-1 h-11 text-sm bg-white border-[#E5E7EB] rounded-[10px] text-[#0B1F4D] placeholder-slate-400"
+                    value={newConsignment}
+                    onChange={(e) => setNewConsignment(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-bold text-[#0B1F4D]">Material Description</Label>
+                  <Input
+                    placeholder="e.g. HR Coils"
+                    className="mt-1 h-11 text-sm bg-white border-[#E5E7EB] rounded-[10px] text-[#0B1F4D] placeholder-slate-400"
+                    value={newMaterial}
+                    onChange={(e) => setNewMaterial(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-bold text-[#0B1F4D]">Start Date</Label>
+                  <Input
+                    type="date"
+                    className="mt-1 h-11 text-sm bg-white border-[#E5E7EB] rounded-[10px] text-[#0B1F4D]"
+                    value={newStartDate}
+                    onChange={(e) => setNewStartDate(e.target.value)}
+                  />
+                </div>
+                {editingTrip && (
+                  <div>
+                    <Label className="text-xs font-bold text-[#0B1F4D]">Trip Status</Label>
+                    <Select value={newTripStatus} onValueChange={(val) => setNewTripStatus(val || "")}>
+                      <SelectTrigger className="mt-1 h-11 text-sm bg-white border-[#E5E7EB] rounded-[10px]">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Planned">Planned</SelectItem>
+                        <SelectItem value="In Transit">In Transit</SelectItem>
+                        <SelectItem value="Delivered">Delivered</SelectItem>
+                        <SelectItem value="Completed">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
-                <div className="mt-3 p-3 bg-gradient-to-r from-emerald-50 to-blue-50 rounded-lg">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Total Expenses
-                    </span>
-                    <span className="font-mono text-red-600">
-                      {formatCurrency(calcExpensesTotal)}
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs font-bold text-[#0B1F4D]">Select Vehicle</Label>
+                  <Select value={selectedTruckId} onValueChange={(val) => setSelectedTruckId(val || "")}>
+                    <SelectTrigger className="mt-1 h-11 text-sm bg-white border-[#E5E7EB] rounded-[10px]">
+                      <SelectValue placeholder="Select vehicle" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {trucksList.map((t) => (
+                        <SelectItem key={t._id} value={t._id}>
+                          {t.vehicleNo} ({t.type})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs font-bold text-[#0B1F4D]">Select Driver</Label>
+                  <Select value={selectedDriverId} onValueChange={(val) => setSelectedDriverId(val || "")}>
+                    <SelectTrigger className="mt-1 h-11 text-sm bg-white border-[#E5E7EB] rounded-[10px]">
+                      <SelectValue placeholder="Select driver" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {driversList.map((d) => (
+                        <SelectItem key={d._id} value={d._id}>
+                          {d.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs font-bold text-[#0B1F4D]">Freight (₹/Ton)</Label>
+                    <Input
+                      type="number"
+                      placeholder="3200"
+                      value={freightRate}
+                      onChange={(e) => setFreightRate(e.target.value)}
+                      className="mt-1 h-11 text-sm bg-white border-[#E5E7EB] rounded-[10px] text-[#0B1F4D] placeholder-slate-400"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-bold text-[#0B1F4D]">Weight (Tons)</Label>
+                    <Input
+                      type="number"
+                      placeholder="32"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      className="mt-1 h-11 text-sm bg-white border-[#E5E7EB] rounded-[10px] text-[#0B1F4D] placeholder-slate-400"
+                    />
+                  </div>
+                </div>
+                
+                {/* Math Calculations Display */}
+                <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-2 text-xs">
+                  <div className="flex justify-between font-semibold">
+                    <span className="text-slate-500">Gross Freight</span>
+                    <span className="text-[#2E9E44]">
+                      {formatCurrency(calcTotalFare)}
                     </span>
                   </div>
-                  <Separator className="my-2" />
-                  <div className="flex justify-between text-sm">
-                    <span className="font-heading font-semibold">
-                      Net Profit
-                    </span>
-                    <span
-                      className={cn(
-                        "font-heading font-bold",
-                        calcNetProfit >= 0
-                          ? "text-emerald-600"
-                          : "text-red-600"
-                      )}
-                    >
-                      {formatCurrency(calcNetProfit)}
+                  <Separator />
+                  <div>
+                    <Label className="text-[10px] font-bold text-[#0B1F4D]">Advance Payment Paid</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={advance}
+                      onChange={(e) => setAdvance(e.target.value)}
+                      className="mt-1 h-10 text-sm bg-white border-[#E5E7EB] rounded-[8px] text-[#0B1F4D] placeholder-slate-400"
+                    />
+                  </div>
+                  <div className="flex justify-between font-semibold pt-1">
+                    <span className="text-slate-500">Pending Amount</span>
+                    <span className="text-[#F59E0B]">
+                      {formatCurrency(Math.max(0, calcPending))}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
-            <DialogFooter>
-              <DialogClose render={<Button variant="outline" size="sm" />}>
-                Cancel
-              </DialogClose>
-                  <Button
-                    size="sm"
-                    className="bg-gradient-to-r from-[#0a192f] to-[#1d3461]"
-                    onClick={handleSaveTrip}
-                    disabled={isSavingTrip}
-                  >
-                    {isSavingTrip ? "Saving..." : (editingTrip ? "Update Trip" : "Save Trip")}
-                  </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-        {[
-          {
-            label: "Total Trips",
-            value: tripsList.length,
-            icon: Route,
-            color: "text-blue-500",
-          },
-          {
-            label: "In Transit",
-            value: inTransitCount,
-            icon: Truck,
-            color: "text-amber-500",
-          },
-          {
-            label: "Total Revenue",
-            value: formatCurrency(totalRevenue),
-            icon: IndianRupee,
-            color: "text-emerald-500",
-          },
-          {
-            label: "Net Profit",
-            value: formatCurrency(totalNetProfit),
-            icon: TrendingUp,
-            color: "text-violet-500",
-          },
-          {
-            label: "Outstanding Fund",
-            value: formatCurrency(totalPendingAmount),
-            icon: AlertCircle,
-            color: "text-rose-500",
-          },
-          {
-            label: "Received Fund",
-            value: formatCurrency(totalReceivedFund),
-            icon: CheckCircle2,
-            color: "text-emerald-500",
-          },
-        ].map((stat) => (
-          <Card key={stat.label} className="shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-muted">
-                  <stat.icon className={`w-4 h-4 ${stat.color}`} />
-                </div>
-                <div>
-                  <p className="text-lg font-heading font-bold">{stat.value}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                    {stat.label}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            <Separator className="bg-slate-100" />
 
-      {/* Search & Filter */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by Trip ID, route, vehicle, consignment..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 text-sm"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val || "")}>
-          <SelectTrigger className="h-9 text-sm w-[140px]">
-            <SelectValue placeholder="Filter status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="Planned">Planned</SelectItem>
-            <SelectItem value="In Transit">In Transit</SelectItem>
-            <SelectItem value="Delivered">Delivered</SelectItem>
-            <SelectItem value="Completed">Completed</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={monthFilter} onValueChange={(val) => setMonthFilter(val || "")}>
-          <SelectTrigger className="h-9 text-sm w-[150px]">
-            <SelectValue placeholder="Filter month" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Months</SelectItem>
-            {uniqueMonths.map((m: any) => (
-              <SelectItem key={m} value={m}>
-                {formatMonthYear(m)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Trip Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {filteredTrips.map((trip) => (
-          <Card
-            key={trip._id || trip.id}
-            className="shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer group"
-            onClick={() => setSelectedTrip(trip)}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {trip.id}
-                    </span>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "text-[10px]",
-                        getStatusColor(trip.tripStatus)
-                      )}
-                    >
-                      {trip.tripStatus}
-                    </Badge>
-                  </div>
-                  <h3 className="font-heading font-semibold text-sm mt-1">
-                    {trip.origin} → {trip.destination}
-                  </h3>
-                </div>
-                <Badge
+            {/* Embedded Expenses Log */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-heading font-bold text-sm flex items-center gap-2 text-[#0B1F4D]">
+                  <Receipt className="w-4 h-4 text-slate-500" /> Dispatch Expenses
+                </h4>
+                <Button
+                  type="button"
                   variant="outline"
-                  className={cn(
-                    "text-[10px]",
-                    getStatusColor(trip.paymentStatus)
-                  )}
+                  size="sm"
+                  onClick={addExpenseRow}
+                  className="text-xs h-8 border-[#E5E7EB] text-[#0B1F4D] rounded-lg bg-white"
                 >
-                  {trip.paymentStatus}
-                </Badge>
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Add Expense
+                </Button>
               </div>
 
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mb-3">
-                <span className="flex items-center gap-1">
-                  <Truck className="w-3 h-3" /> {trip.vehicleNo}
-                </span>
-                <span className="flex items-center gap-1">
-                  <User className="w-3 h-3" /> {trip.driverName}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Package className="w-3 h-3" /> {trip.consignment}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> {formatDate(trip.startDate)}
-                </span>
-              </div>
-
-              <Separator className="my-2" />
-
-              <div className="grid grid-cols-4 gap-2 text-center">
-                <div>
-                  <p className="text-[10px] text-muted-foreground">
-                    Total Fare
-                  </p>
-                  <p className="text-xs font-heading font-bold">
-                    {formatCurrency(trip.totalFare)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Expenses</p>
-                  <p className="text-xs font-mono text-red-600">
-                    {formatCurrency(trip.totalExpenses)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Pending</p>
-                  <p className="text-xs font-mono text-amber-600">
-                    {formatCurrency(trip.pendingBalance)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground">
-                    Net Profit
-                  </p>
-                  <p
-                    className={cn(
-                      "text-xs font-heading font-bold",
-                      trip.netProfit >= 0
-                        ? "text-emerald-600"
-                        : "text-red-600"
-                    )}
-                  >
-                    {formatCurrency(trip.netProfit)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 mt-3 pt-2 border-t border-border/50">
-                <span className="text-[10px] text-muted-foreground">
-                  Docs:
-                </span>
-                <div className="flex items-center gap-1.5">
-                  {[
-                    { key: "lrCopy" as const, label: "LR" },
-                    { key: "invoice" as const, label: "INV" },
-                    { key: "pod" as const, label: "POD" },
-                    { key: "paymentReceipt" as const, label: "RCT" },
-                  ].map((doc) => (
-                    <div key={doc.key} className="flex items-center gap-1">
-                      {getDocDot(trip.documents?.[doc.key])}
-                      <span className="text-[9px] text-muted-foreground">
-                        {doc.label}
-                      </span>
+              {newExpenses.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-4 bg-slate-50 rounded-xl font-medium">No expenses mapped yet.</p>
+              ) : (
+                <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                  {newExpenses.map((exp, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Select
+                        value={exp.category}
+                        onValueChange={(val) => {
+                          const updated = [...newExpenses];
+                          updated[idx].category = val || "";
+                          setNewExpenses(updated);
+                        }}
+                      >
+                        <SelectTrigger className="h-9 text-xs w-[130px] bg-white border-[#E5E7EB] rounded-lg">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {["Fuel", "Toll", "Driver Advance", "Loading", "Unloading", "Repair", "RTO", "Other"].map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="number"
+                        placeholder="Amount"
+                        value={exp.amount}
+                        onChange={(e) => {
+                          const updated = [...newExpenses];
+                          updated[idx].amount = e.target.value;
+                          setNewExpenses(updated);
+                        }}
+                        className="h-9 text-xs w-[100px] bg-white border-[#E5E7EB] rounded-lg text-[#0B1F4D]"
+                      />
+                      <Input
+                        placeholder="Note"
+                        value={exp.description}
+                        onChange={(e) => {
+                          const updated = [...newExpenses];
+                          updated[idx].description = e.target.value;
+                          setNewExpenses(updated);
+                        }}
+                        className="h-9 text-xs flex-1 bg-white border-[#E5E7EB] rounded-lg text-[#0B1F4D]"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeExpenseRow(idx)}
+                        className="h-9 w-9 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>
-                <span className="text-[10px] text-muted-foreground ml-auto">
-                  ₹{trip.freightRate}/ton × {trip.quantity}T
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              )}
 
-      {/* Trip Detail Dialog */}
-      <Dialog
-        open={!!selectedTrip}
-        onOpenChange={() => setSelectedTrip(null)}
-      >
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+              <div className="mt-3 p-3 bg-gradient-to-r from-emerald-50 to-[#0B1F4D]/5 rounded-xl flex items-center justify-between text-xs font-semibold">
+                <span className="text-slate-500">Expenses: <span className="text-[#EF4444] font-mono">{formatCurrency(calcExpensesTotal)}</span></span>
+                <span className="text-slate-500">Net Profit: <span className={cn("font-heading font-black", calcNetProfit >= 0 ? "text-[#2E9E44]" : "text-rose-600")}>{formatCurrency(calcNetProfit)}</span></span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <DialogClose render={<Button variant="outline" className="h-11 px-6 rounded-lg text-[#0B1F4D] border-[#E5E7EB]" />}>
+              Cancel
+            </DialogClose>
+            <Button
+              className="h-11 px-6 rounded-lg bg-[#0B1F4D] text-white hover:bg-[#0B1F4D]/90 font-bold"
+              onClick={handleSaveTrip}
+              disabled={isSavingTrip}
+            >
+              {isSavingTrip ? "Saving..." : (editingTrip ? "Update Dispatch" : "Confirm Dispatch")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Trip Details Dialog Drawer */}
+      <Dialog open={!!selectedTrip} onOpenChange={() => setSelectedTrip(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-[20px] bg-white border border-[#E5E7EB] text-[#0B1F4D]">
           {selectedTrip && (
             <>
               <DialogHeader>
-                <DialogTitle className="font-heading flex items-center gap-2">
-                  <Route className="w-5 h-5" /> {selectedTrip.tripId || selectedTrip.id}
+                <DialogTitle className="font-heading text-lg font-black text-[#0B1F4D] flex items-center gap-2">
+                  <Route className="w-5 h-5 text-[#0B1F4D]" /> Dispatch {selectedTrip.tripId || selectedTrip.id}
                 </DialogTitle>
-                <DialogDescription>
-                  {selectedTrip.origin} → {selectedTrip.destination} ·{" "}
-                  {selectedTrip.consignment}
+                <DialogDescription className="text-slate-400 font-medium">
+                  Route: {selectedTrip.origin} → {selectedTrip.destination}
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-4">
+              <div className="space-y-6 py-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "text-xs",
-                        getStatusColor(selectedTrip.tripStatus)
-                      )}
-                    >
+                    <Badge variant="outline" className={cn("text-[8px] font-bold rounded-full py-0.5 px-2", getStatusColor(selectedTrip.tripStatus))}>
                       {selectedTrip.tripStatus}
                     </Badge>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "text-xs",
-                        getStatusColor(selectedTrip.paymentStatus)
-                      )}
-                    >
+                    <Badge variant="outline" className={cn("text-[8px] font-bold rounded-full py-0.5 px-2", getStatusColor(selectedTrip.paymentStatus))}>
                       Payment: {selectedTrip.paymentStatus}
                     </Badge>
                   </div>
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="gap-1 text-xs"
+                    className="h-9 px-4 text-xs font-bold gap-1 border-[#E5E7EB] text-[#0B1F4D] rounded-lg"
                     onClick={() => handleStartEditTrip(selectedTrip)}
                   >
-                    <Edit className="w-3 h-3" /> Edit Trip
+                    <Edit className="w-3.5 h-3.5" /> Edit Details
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {[
-                    { label: "Vehicle", value: selectedTrip.vehicleNo, icon: Truck },
-                    { label: "Driver", value: selectedTrip.driverName, icon: User },
-                    { label: "Material", value: selectedTrip.material, icon: Package },
-                    { label: "Start Date", value: formatDate(selectedTrip.startDate), icon: Clock },
-                    { label: "Freight Rate", value: `₹${selectedTrip.freightRate}/ton`, icon: IndianRupee },
-                    { label: "Quantity", value: `${selectedTrip.quantity} Tons`, icon: Package },
+                    { label: "Vehicle Number", value: selectedTrip.vehicleNo || "N/A", icon: Truck },
+                    { label: "Assignee Driver", value: selectedTrip.driverName || "N/A", icon: User },
+                    { label: "Material Load", value: selectedTrip.material || "N/A", icon: Package },
+                    { label: "Customer Name", value: selectedTrip.consignment || "N/A", icon: Package },
+                    { label: "Dispatch Date", value: formatDate(selectedTrip.startDate), icon: Clock },
+                    { label: "Freight Cargo Billing", value: `₹${selectedTrip.freightRate || 0}/ton × ${selectedTrip.quantity || 0} tons`, icon: IndianRupee },
                   ].map((item) => (
-                    <div
-                      key={item.label}
-                      className="p-3 bg-muted/50 rounded-lg"
-                    >
+                    <div key={item.label} className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <item.icon className="w-3 h-3 text-muted-foreground" />
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                          {item.label}
-                        </p>
+                        <item.icon className="w-3.5 h-3.5 text-slate-400" />
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{item.label}</p>
                       </div>
-                      <p className="text-sm font-medium">{item.value}</p>
+                      <p className="text-xs font-bold text-[#0B1F4D]">{item.value}</p>
                     </div>
                   ))}
                 </div>
 
-                <Separator />
+                <Separator className="bg-slate-100" />
 
-                <div className="p-4 bg-gradient-to-r from-emerald-50 to-blue-50 rounded-lg space-y-2">
-                  <h4 className="font-heading font-semibold text-sm">
-                    Profit Audit
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {/* Audit summary */}
+                <div className="p-4 bg-gradient-to-r from-emerald-50 to-[#0B1F4D]/5 border border-slate-100 rounded-xl space-y-3">
+                  <h4 className="font-heading font-black text-sm text-[#0B1F4D]">Freight Profit Audit</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
                     <div>
-                      <p className="text-[10px] text-muted-foreground">
-                        Total Fare
-                      </p>
-                      <p className="text-base font-heading font-bold text-emerald-600">
-                        {formatCurrency(selectedTrip.totalFare)}
-                      </p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">Gross Fare</p>
+                      <p className="text-sm font-bold text-[#0B1F4D]">{formatCurrency(selectedTrip.totalFare || 0)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-muted-foreground">
-                        Total Expenses
-                      </p>
-                      <p className="text-base font-mono text-red-600">
-                        {formatCurrency(selectedTrip.totalExpenses)}
-                      </p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">Ledger Expenses</p>
+                      <p className="text-sm font-mono font-bold text-[#EF4444]">{formatCurrency(selectedTrip.totalExpenses || 0)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-muted-foreground">
-                        Pending
-                      </p>
-                      <p className="text-base font-mono text-amber-600">
-                        {formatCurrency(selectedTrip.pendingBalance)}
-                      </p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">Pending Receivable</p>
+                      <p className="text-sm font-mono font-bold text-[#F59E0B]">{formatCurrency(selectedTrip.pendingBalance || 0)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-muted-foreground">
-                        Net Profit
-                      </p>
-                      <p
-                        className={cn(
-                          "text-base font-heading font-bold",
-                          selectedTrip.netProfit >= 0
-                            ? "text-emerald-600"
-                            : "text-red-600"
-                        )}
-                      >
-                        {formatCurrency(selectedTrip.netProfit)}
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">Net Profit</p>
+                      <p className={cn("text-sm font-heading font-black", (selectedTrip.netProfit || 0) >= 0 ? "text-[#2E9E44]" : "text-rose-600")}>
+                        {formatCurrency(selectedTrip.netProfit || 0)}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <Separator />
+                <Separator className="bg-slate-100" />
 
+                {/* Expense List */}
                 <div>
-                  <h4 className="font-heading font-semibold text-sm flex items-center gap-2 mb-3">
-                    <Receipt className="w-4 h-4" /> Trip Expenses (
-                    {(selectedTrip.expenses || []).length})
+                  <h4 className="font-heading font-bold text-sm flex items-center gap-2 mb-3 text-[#0B1F4D]">
+                    <Receipt className="w-4 h-4 text-slate-500" /> Itemized Expense Log ({(selectedTrip.expenses || []).length})
                   </h4>
                   {(!selectedTrip.expenses || selectedTrip.expenses.length === 0) ? (
-                    <p className="text-xs text-muted-foreground text-center py-4 bg-muted/30 rounded-lg">
-                      No expenses recorded for this trip.
-                    </p>
+                    <p className="text-xs text-slate-400 text-center py-4 bg-slate-50 rounded-xl font-medium">No expenses logged for this dispatch.</p>
                   ) : (
-                    <div className="space-y-1.5">
-                      {selectedTrip.expenses.map((exp: any) => (
-                        <div
-                          key={exp._id || exp.id}
-                          className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="text-[10px]">
-                              {exp.category}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {exp.description}
-                            </span>
+                    <div className="space-y-2 max-h-[180px] overflow-y-auto">
+                      {selectedTrip.expenses.map((exp: any, i: number) => (
+                        <div key={i} className="flex justify-between items-center p-3 bg-slate-50 hover:bg-slate-100/70 border border-slate-100 rounded-lg text-xs font-semibold">
+                          <div className="space-y-0.5">
+                            <p className="text-[#0B1F4D]">{exp.category} <span className="text-[10px] text-slate-400 font-normal">({exp.description || "no description"})</span></p>
+                            <p className="text-[9px] text-slate-400 font-normal">{exp.date ? formatDate(exp.date) : "N/A"}</p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm font-mono font-medium text-red-600">
-                              {formatCurrency(exp.amount)}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground">
-                              {formatDate(exp.date)}
-                            </p>
-                          </div>
+                          <span className="font-mono text-rose-600 font-bold">{formatCurrency(exp.amount || 0)}</span>
                         </div>
                       ))}
                     </div>
                   )}
-                </div>
-
-                <Separator />
-
-                <div>
-                  <h4 className="font-heading font-semibold text-sm flex items-center gap-2 mb-3">
-                    <FileText className="w-4 h-4" /> Document Vault
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {[
-                      { label: "LR Copy", key: "lrCopy" as const },
-                      { label: "Invoice", key: "invoice" as const },
-                      { label: "POD", key: "pod" as const },
-                      {
-                        label: "Payment Receipt",
-                        key: "paymentReceipt" as const,
-                      },
-                    ].map((doc) => (
-                      <div
-                        key={doc.key}
-                        className={cn(
-                          "p-3 rounded-lg border-2 border-dashed text-center",
-                          selectedTrip.documents?.[doc.key]
-                            ? "border-emerald-300 bg-emerald-50"
-                            : "border-gray-200 bg-gray-50"
-                        )}
-                      >
-                        {selectedTrip.documents?.[doc.key] ? (
-                          <CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto mb-1" />
-                        ) : (
-                          <AlertCircle className="w-5 h-5 text-gray-400 mx-auto mb-1" />
-                        )}
-                        <p className="text-xs font-medium">{doc.label}</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {selectedTrip.documents?.[doc.key]
-                            ? "Uploaded"
-                            : "Not uploaded"}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               </div>
             </>

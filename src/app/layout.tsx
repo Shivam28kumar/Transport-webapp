@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
@@ -19,6 +19,12 @@ export const metadata: Metadata = {
   description:
     "Enterprise-grade corporate logistics and bioenergy transport management platform. Manage fleet, trips, finances, and operations from a single cockpit.",
   keywords: ["logistics", "fleet management", "transport", "bioenergy", "Veltrix Group"],
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0b1f4d",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({

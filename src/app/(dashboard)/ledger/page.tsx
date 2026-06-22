@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -34,10 +34,10 @@ import {
   Download,
   X,
   Wallet,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
-import { type LedgerEntry } from "@/lib/mock-data";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
-import { useEffect } from "react";
 
 interface NewExpenseLine {
   category: string;
@@ -95,8 +95,6 @@ export default function LedgerPage() {
 
   const handleSaveIncome = async () => {
     if (!incomeAmount || !incomeCategory || !incomeMode || !incomeDesc) return;
-    
-    // Find selected trip to get vehicleNo and consignment details
     const selectedTrip = tripsList.find(t => t.tripId === incomeTrip || t._id === incomeTrip);
 
     try {
@@ -121,7 +119,6 @@ export default function LedgerPage() {
       if (res.ok) {
         const saved = await res.json();
         setLedgerList((prev) => [saved, ...prev]);
-        // Reset form
         setIncomeTrip("");
         setIncomeAmount("");
         setIncomeCategory("Freight Payment");
@@ -129,7 +126,6 @@ export default function LedgerPage() {
         setIncomeRef("");
         setIncomeDesc("");
         setIsIncomeDialogOpen(false);
-        // Refresh page data
         fetchLedgerData();
       }
     } catch (error) {
@@ -141,13 +137,10 @@ export default function LedgerPage() {
 
   const handleSaveExpenses = async () => {
     const invalid = expenseLines.some(l => !l.amount || !l.category || !l.description);
-    if (invalid) {
-      return;
-    }
+    if (invalid) return;
 
     try {
       setIsSavingExpense(true);
-
       const payload = expenseLines.map(line => ({
         date: new Date().toISOString().split("T")[0],
         type: "Expense" as const,
@@ -168,11 +161,8 @@ export default function LedgerPage() {
         const saved = await res.json();
         const savedArray = Array.isArray(saved) ? saved : [saved];
         setLedgerList((prev) => [...savedArray, ...prev]);
-        
-        // Reset form
         setExpenseLines([{ category: "Fuel", description: "", amount: "", vehicleNo: "" }]);
         setIsExpenseDialogOpen(false);
-        // Refresh page data
         fetchLedgerData();
       }
     } catch (error) {
@@ -223,52 +213,45 @@ export default function LedgerPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-3">
-        <span className="w-6 h-6 rounded-full border-2 border-[#0a192f] border-t-transparent animate-spin" />
-        <p className="text-sm text-muted-foreground font-heading">Loading financial ledger...</p>
+        <span className="w-6 h-6 rounded-full border-2 border-[#0B1F4D] border-t-transparent animate-spin" />
+        <p className="text-sm text-slate-500 font-heading">Loading financial ledger...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
+      {/* Page Header with Action Buttons (rounded 14px, 52px height) */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="font-heading text-2xl md:text-3xl font-bold tracking-tight">
+          <h2 className="font-heading text-2xl md:text-3xl font-black text-[#0B1F4D]">
             Financial Ledger
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Unified income & expense records with trip linking
+          </h2>
+          <p className="text-xs text-slate-400 font-medium mt-1">
+            Unified billing records and itemized operational expenses
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {/* Add Income Dialog */}
           <Dialog open={isIncomeDialogOpen} onOpenChange={setIsIncomeDialogOpen}>
-            <DialogTrigger
-              render={
-                <Button
-                  size="sm"
-                  className="gap-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white"
-                >
-                  <ArrowUpRight className="w-3.5 h-3.5" /> Add Income
-                </Button>
-              }
-            />
-            <DialogContent className="max-w-md">
+            <DialogTrigger render={<Button className="h-[52px] rounded-[14px] bg-[#2E9E44] hover:bg-[#2E9E44]/90 text-white font-bold px-6 gap-2" />}>
+              <Plus className="w-5 h-5" /> Add Income
+            </DialogTrigger>
+            <DialogContent className="max-w-md rounded-[20px] bg-white border border-[#E5E7EB] text-[#0B1F4D]">
               <DialogHeader>
-                <DialogTitle className="font-heading text-emerald-700 flex items-center gap-2">
-                  <ArrowUpRight className="w-5 h-5" /> Record Income
+                <DialogTitle className="font-heading text-lg font-black flex items-center gap-2">
+                  <ArrowUpRight className="w-5 h-5 text-[#2E9E44]" /> Record Income
                 </DialogTitle>
-                <DialogDescription>
-                  Record freight payment or other revenue.
+                <DialogDescription className="text-slate-400 font-medium">
+                  Log customer payment receipts or other cargo revenue.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
+              <div className="grid gap-4 py-4 text-xs font-semibold">
                 <div>
-                  <Label className="text-xs">Select Trip (Optional)</Label>
+                  <Label className="text-xs font-bold text-[#0B1F4D]">Select Trip Link (Optional)</Label>
                   <Select value={incomeTrip} onValueChange={(val) => setIncomeTrip(val || "")}>
-                    <SelectTrigger className="mt-1 h-9 text-sm">
-                      <SelectValue placeholder="Select trip to auto-fill" />
+                    <SelectTrigger className="mt-1 h-11 bg-white border-[#E5E7EB] rounded-[10px] text-sm">
+                      <SelectValue placeholder="Select active dispatch to link" />
                     </SelectTrigger>
                     <SelectContent>
                       {tripsList.map((t) => (
@@ -280,97 +263,84 @@ export default function LedgerPage() {
                   </Select>
                 </div>
                 {selectedTripData && (
-                  <div className="p-3 bg-emerald-50 rounded-lg space-y-1.5">
-                    <p className="text-xs text-muted-foreground">
-                      Auto-filled from trip
-                    </p>
-                    <div className="flex justify-between text-sm">
-                      <span>Vehicle</span>
-                      <span className="font-mono font-medium">
-                        {selectedTripData.vehicleNo}
-                      </span>
+                  <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl space-y-1.5 font-medium text-xs">
+                    <p className="text-[10px] text-emerald-600 font-bold uppercase">Linked Cargo details</p>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Vehicle</span>
+                      <span className="font-mono font-bold text-[#0B1F4D]">{selectedTripData.vehicleNo}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Consignment</span>
-                      <span className="font-medium">
-                        {selectedTripData.consignment}
-                      </span>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Customer</span>
+                      <span className="font-bold text-[#0B1F4D]">{selectedTripData.consignment}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Pending Balance</span>
-                      <span className="font-mono font-medium text-amber-600">
-                        {formatCurrency(selectedTripData.pendingBalance)}
-                      </span>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Outstanding Balance</span>
+                      <span className="font-mono font-bold text-[#F59E0B]">{formatCurrency(selectedTripData.pendingBalance)}</span>
                     </div>
                   </div>
                 )}
                 <div>
-                  <Label className="text-xs">Amount (₹)</Label>
+                  <Label className="text-xs font-bold text-[#0B1F4D]">Amount (₹)</Label>
                   <Input
                     type="number"
-                    placeholder="Enter amount"
-                    className="mt-1 h-9 text-sm"
+                    placeholder="Enter revenue amount"
+                    className="mt-1 h-11 text-sm bg-white border-[#E5E7EB] rounded-[10px]"
                     value={incomeAmount}
                     onChange={(e) => setIncomeAmount(e.target.value)}
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Category</Label>
+                  <Label className="text-xs font-bold text-[#0B1F4D]">Category</Label>
                   <Select value={incomeCategory} onValueChange={(val) => setIncomeCategory(val || "")}>
-                    <SelectTrigger className="mt-1 h-9 text-sm">
+                    <SelectTrigger className="mt-1 h-11 bg-white border-[#E5E7EB] rounded-[10px] text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Freight Payment">
-                        Freight Payment
-                      </SelectItem>
+                      <SelectItem value="Freight Payment">Freight Payment</SelectItem>
                       <SelectItem value="Demurrage">Demurrage</SelectItem>
                       <SelectItem value="Other Income">Other Income</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs">Payment Mode</Label>
+                  <Label className="text-xs font-bold text-[#0B1F4D]">Payment Method</Label>
                   <Select value={incomeMode} onValueChange={(val) => setIncomeMode(val || "")}>
-                    <SelectTrigger className="mt-1 h-9 text-sm">
+                    <SelectTrigger className="mt-1 h-11 bg-white border-[#E5E7EB] rounded-[10px] text-sm">
                       <SelectValue placeholder="Select mode" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="UPI">UPI</SelectItem>
-                      <SelectItem value="Bank Transfer">
-                        Bank Transfer
-                      </SelectItem>
+                      <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
                       <SelectItem value="Cash">Cash</SelectItem>
                       <SelectItem value="Cheque">Cheque</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs">Reference No. (Optional)</Label>
+                  <Label className="text-xs font-bold text-[#0B1F4D]">Reference No. (Optional)</Label>
                   <Input
-                    placeholder="NEFT/UPI/Cheque reference"
-                    className="mt-1 h-9 text-sm"
+                    placeholder="NEFT/UPI/Cheque reference ID"
+                    className="mt-1 h-11 text-sm bg-white border-[#E5E7EB] rounded-[10px]"
                     value={incomeRef}
                     onChange={(e) => setIncomeRef(e.target.value)}
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Description</Label>
+                  <Label className="text-xs font-bold text-[#0B1F4D]">Log Description</Label>
                   <Input
-                    placeholder="Payment description"
-                    className="mt-1 h-9 text-sm"
+                    placeholder="Payment description notes"
+                    className="mt-1 h-11 text-sm bg-white border-[#E5E7EB] rounded-[10px]"
                     value={incomeDesc}
                     onChange={(e) => setIncomeDesc(e.target.value)}
                   />
                 </div>
               </div>
-              <DialogFooter>
-                <DialogClose render={<Button variant="outline" size="sm" />}>
+              <DialogFooter className="gap-2">
+                <DialogClose render={<Button variant="outline" className="h-11 px-6 rounded-lg text-[#0B1F4D] border-[#E5E7EB]" />}>
                   Cancel
                 </DialogClose>
                 <Button
-                  size="sm"
-                  className="bg-gradient-to-r from-emerald-500 to-emerald-600"
+                  className="h-11 px-6 rounded-lg bg-[#0B1F4D] text-white font-bold"
                   onClick={handleSaveIncome}
                   disabled={isSavingIncome || !incomeAmount || !incomeDesc}
                 >
@@ -382,150 +352,118 @@ export default function LedgerPage() {
 
           {/* Add Expense Dialog */}
           <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
-            <DialogTrigger
-              render={
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 border-red-200 text-red-600 hover:bg-red-50"
-                >
-                  <ArrowDownRight className="w-3.5 h-3.5" /> Add Expense
-                </Button>
-              }
-            />
-            <DialogContent className="max-w-lg">
+            <DialogTrigger render={<Button className="h-[52px] rounded-[14px] bg-[#EF4444] hover:bg-[#EF4444]/90 text-white font-bold px-6 gap-2" />}>
+              <Plus className="w-5 h-5" /> Add Expense
+            </DialogTrigger>
+            <DialogContent className="max-w-lg rounded-[20px] bg-white border border-[#E5E7EB] text-[#0B1F4D]">
               <DialogHeader>
-                <DialogTitle className="font-heading text-red-700 flex items-center gap-2">
-                  <ArrowDownRight className="w-5 h-5" /> Record Expenses
+                <DialogTitle className="font-heading text-lg font-black flex items-center gap-2">
+                  <ArrowDownRight className="w-5 h-5 text-[#EF4444]" /> Record Expense
                 </DialogTitle>
-                <DialogDescription>
-                  Add one or more expense entries. Trip linking is automatic.
+                <DialogDescription className="text-slate-400 font-medium">
+                  Record fleet expenses. Auto-links based on Active Trip status.
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="p-3 bg-amber-50 rounded-lg">
-                  <p className="text-xs text-amber-800">
-                    <strong>Auto-link Rule:</strong> Expenses with a vehicle
-                    number will be automatically linked to the active trip for
-                    that vehicle.
-                  </p>
+              <div className="space-y-4 py-4 text-xs font-semibold">
+                <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 font-medium">
+                  <p className="text-[10px] text-amber-700 font-bold uppercase mb-0.5">Auto-link Policy</p>
+                  Line items containing a Vehicle Number will link to their active dispatch automatically.
                 </div>
-                {expenseLines.map((line, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 bg-muted/30 rounded-lg space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        Expense #{idx + 1}
-                      </span>
-                      {expenseLines.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeExpenseLine(idx)}
-                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                
+                <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+                  {expenseLines.map((line, idx) => (
+                    <div key={idx} className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Item #{idx + 1}</span>
+                        {expenseLines.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeExpenseLine(idx)}
+                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Select
+                          value={line.category}
+                          onValueChange={(val) => {
+                            const updated = [...expenseLines];
+                            updated[idx].category = val || "";
+                            setExpenseLines(updated);
+                          }}
                         >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Select
-                        value={line.category}
-                        onValueChange={(val) => {
-                          const updated = [...expenseLines];
-                          updated[idx].category = val || "";
-                          setExpenseLines(updated);
-                        }}
-                      >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {[
-                            "Fuel",
-                            "Toll",
-                            "Driver Advance",
-                            "Loading",
-                            "Unloading",
-                            "Repair",
-                            "RTO",
-                            "Office Rent",
-                            "Salary",
-                            "Other",
-                          ].map((c) => (
-                            <SelectItem key={c} value={c}>
-                              {c}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                          <SelectTrigger className="h-9 text-xs bg-white border-[#E5E7EB] rounded-lg">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {["Fuel", "Toll", "Driver Advance", "Loading", "Unloading", "Repair", "RTO", "Office Rent", "Salary", "Other"].map((c) => (
+                              <SelectItem key={c} value={c}>
+                                {c}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="number"
+                          placeholder="Amount"
+                          value={line.amount}
+                          onChange={(e) => {
+                            const updated = [...expenseLines];
+                            updated[idx].amount = e.target.value;
+                            setExpenseLines(updated);
+                          }}
+                          className="h-9 text-xs bg-white border-[#E5E7EB] rounded-lg text-[#0B1F4D]"
+                        />
+                      </div>
                       <Input
-                        type="number"
-                        placeholder="Amount"
-                        value={line.amount}
+                        placeholder="Vehicle Registration No. (Optional)"
+                        value={line.vehicleNo}
                         onChange={(e) => {
                           const updated = [...expenseLines];
-                          updated[idx].amount = e.target.value;
+                          updated[idx].vehicleNo = e.target.value;
                           setExpenseLines(updated);
                         }}
-                        className="h-8 text-xs"
+                        className="h-9 text-xs bg-white border-[#E5E7EB] rounded-lg text-[#0B1F4D]"
+                      />
+                      <Input
+                        placeholder="Expense description notes"
+                        value={line.description}
+                        onChange={(e) => {
+                          const updated = [...expenseLines];
+                          updated[idx].description = e.target.value;
+                          setExpenseLines(updated);
+                        }}
+                        className="h-9 text-xs bg-white border-[#E5E7EB] rounded-lg text-[#0B1F4D]"
                       />
                     </div>
-                    <Input
-                      placeholder="Vehicle No. (for auto-trip-link)"
-                      value={line.vehicleNo}
-                      onChange={(e) => {
-                        const updated = [...expenseLines];
-                        updated[idx].vehicleNo = e.target.value;
-                        setExpenseLines(updated);
-                      }}
-                      className="h-8 text-xs"
-                    />
-                    <Input
-                      placeholder="Description"
-                      value={line.description}
-                      onChange={(e) => {
-                        const updated = [...expenseLines];
-                        updated[idx].description = e.target.value;
-                        setExpenseLines(updated);
-                      }}
-                      className="h-8 text-xs"
-                    />
-                  </div>
-                ))}
+                  ))}
+                </div>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={addExpenseLine}
-                  className="w-full text-xs gap-1"
+                  className="w-full text-xs h-9 border-[#E5E7EB] text-[#0B1F4D] rounded-lg bg-white"
                 >
-                  <Plus className="w-3 h-3" /> Add Another Expense Line
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Add Multi-line Expense
                 </Button>
-                <div className="p-3 bg-red-50 rounded-lg">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Total</span>
-                    <span className="font-heading font-bold text-red-600">
-                      {formatCurrency(
-                        expenseLines.reduce(
-                          (sum, l) => sum + (Number(l.amount) || 0),
-                          0
-                        )
-                      )}
-                    </span>
-                  </div>
+                <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex justify-between font-bold text-xs">
+                  <span className="text-slate-500">Expenses Sum</span>
+                  <span className="text-[#EF4444] font-mono">
+                    {formatCurrency(expenseLines.reduce((sum, l) => sum + (Number(l.amount) || 0), 0))}
+                  </span>
                 </div>
               </div>
-              <DialogFooter>
-                <DialogClose render={<Button variant="outline" size="sm" />}>
+              <DialogFooter className="gap-2">
+                <DialogClose render={<Button variant="outline" className="h-11 px-6 rounded-lg text-[#0B1F4D] border-[#E5E7EB]" />}>
                   Cancel
                 </DialogClose>
                 <Button
-                  size="sm"
-                  className="bg-gradient-to-r from-red-500 to-red-600"
+                  className="h-11 px-6 rounded-lg bg-[#0B1F4D] text-white font-bold"
                   onClick={handleSaveExpenses}
                   disabled={isSavingExpense || expenseLines.some(l => !l.amount || !l.category || !l.description)}
                 >
@@ -537,261 +475,186 @@ export default function LedgerPage() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="shadow-sm border-l-4 border-l-emerald-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+      {/* Summary Cards with rounded-2xl (20px) corners */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        {[
+          { label: "Total Revenue", value: formatCurrency(totalIncome), color: "text-[#2E9E44]", circleBg: "bg-emerald-50 text-emerald-600", icon: TrendingUp },
+          { label: "Total Expenses", value: formatCurrency(totalExpenses), color: "text-[#EF4444]", circleBg: "bg-red-50 text-red-500", icon: TrendingDown },
+          { label: "Net Balance", value: formatCurrency(netBalance), color: netBalance >= 0 ? "text-[#0B1F4D]" : "text-rose-600", circleBg: "bg-[#0B1F4D]/10 text-[#0B1F4D]", icon: Wallet },
+        ].map((card) => (
+          <Card key={card.label} className="border border-[#E5E7EB] rounded-[20px] bg-white shadow-sm ring-0">
+            <CardContent className="p-5 flex items-center justify-between gap-4">
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Total Income
-                </p>
-                <p className="text-xl font-heading font-bold text-emerald-600">
-                  {formatCurrency(totalIncome)}
-                </p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{card.label}</p>
+                <p className={cn("text-xl md:text-2xl font-heading font-black tracking-tight mt-1", card.color)}>{card.value}</p>
               </div>
-              <div className="p-2 rounded-lg bg-emerald-50">
-                <TrendingUp className="w-5 h-5 text-emerald-500" />
+              <div className={cn("w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-sm", card.circleBg)}>
+                <card.icon className="w-5 h-5" />
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-l-4 border-l-red-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Total Expenses
-                </p>
-                <p className="text-xl font-heading font-bold text-red-600">
-                  {formatCurrency(totalExpenses)}
-                </p>
-              </div>
-              <div className="p-2 rounded-lg bg-red-50">
-                <TrendingDown className="w-5 h-5 text-red-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-l-4 border-l-blue-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Net Balance
-                </p>
-                <p
-                  className={cn(
-                    "text-xl font-heading font-bold",
-                    netBalance >= 0 ? "text-blue-600" : "text-red-600"
-                  )}
-                >
-                  {formatCurrency(netBalance)}
-                </p>
-              </div>
-              <div className="p-2 rounded-lg bg-blue-50">
-                <Wallet className="w-5 h-5 text-blue-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Search & Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      {/* Search, Filter & Export */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input
-            placeholder="Search by description, category, vehicle, trip ID..."
+            placeholder="Search by description, category, vehicle number, trip ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 text-sm"
+            className="pl-9 h-11 text-sm bg-white border-[#E5E7EB] rounded-[12px] shadow-sm text-[#0B1F4D] placeholder-slate-400"
           />
         </div>
-        <Select value={typeFilter} onValueChange={(val) => setTypeFilter(val || "")}>
-          <SelectTrigger className="h-9 text-sm w-[140px]">
-            <SelectValue placeholder="Filter" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="Income">Income Only</SelectItem>
-            <SelectItem value="Expense">Expenses Only</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-          <Download className="w-3.5 h-3.5" /> Export
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={typeFilter} onValueChange={(val) => setTypeFilter(val || "")}>
+            <SelectTrigger className="h-11 text-sm w-[130px] bg-white border-[#E5E7EB] rounded-[12px] shadow-sm text-[#0B1F4D]">
+              <SelectValue placeholder="All Ledger" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="Income">Income</SelectItem>
+              <SelectItem value="Expense">Expenses</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button className="h-[44px] rounded-[12px] bg-[#0B1F4D] hover:bg-[#0B1F4D]/90 text-white font-bold px-4 gap-1.5 shadow-md">
+            <Download className="w-4 h-4" /> Export
+          </Button>
+        </div>
       </div>
 
-      {/* Ledger Table */}
-      <Card className="shadow-sm">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Vehicle
-                  </th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Trip
-                  </th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Mode
-                  </th>
-                  <th className="text-right py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Amount
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredEntries.map((entry) => (
-                  <tr
-                    key={entry._id || entry.id}
-                    className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
-                    onClick={() => setSelectedEntry(entry)}
-                  >
-                    <td className="py-3 px-4 text-xs">
-                      {formatDate(entry.date)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-1">
-                        {entry.type === "Income" ? (
-                          <ArrowUpRight className="w-3 h-3 text-emerald-500" />
-                        ) : (
-                          <ArrowDownRight className="w-3 h-3 text-red-500" />
-                        )}
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-[10px]",
-                            entry.type === "Income"
-                              ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
-                              : "bg-red-500/10 text-red-700 border-red-500/20"
-                          )}
-                        >
-                          {entry.type}
-                        </Badge>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-xs">{entry.category}</td>
-                    <td className="py-3 px-4 text-xs max-w-[200px] truncate">
-                      {entry.description}
-                    </td>
-                    <td className="py-3 px-4 font-mono text-xs">
-                      {entry.vehicleNo || "—"}
-                    </td>
-                    <td className="py-3 px-4 font-mono text-xs">
-                      {entry.tripId || "—"}
-                    </td>
-                    <td className="py-3 px-4">
-                      <Badge variant="secondary" className="text-[10px]">
-                        {entry.paymentMode}
-                      </Badge>
-                    </td>
-                    <td
-                      className={cn(
-                        "py-3 px-4 text-right font-mono font-medium",
-                        entry.type === "Income"
-                          ? "text-emerald-600"
-                          : "text-red-600"
-                      )}
-                    >
-                      {entry.type === "Income" ? "+" : "-"}
-                      {formatCurrency(entry.amount)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Responsive Ledger lists/table */}
+      {filteredEntries.length === 0 ? (
+        <Card className="border border-[#E5E7EB] rounded-[20px] bg-white py-12 text-center shadow-sm">
+          <CardContent className="space-y-3">
+            <AlertCircle className="w-10 h-10 text-slate-300 mx-auto" />
+            <p className="text-sm font-semibold text-slate-500">No ledger statements found matching filters</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Mobile view: Premium Expense Cards */}
+          <div className="md:hidden space-y-4">
+            {filteredEntries.map((entry) => (
+              <Card 
+                key={entry._id || entry.id} 
+                className="border border-[#E5E7EB] rounded-[20px] bg-white shadow-sm ring-0 p-5 hover:shadow-md transition-all cursor-pointer"
+                onClick={() => setSelectedEntry(entry)}
+              >
+                <CardContent className="p-0 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">{formatDate(entry.date)}</span>
+                    <Badge variant="outline" className={cn("text-[8px] font-bold rounded-full py-0.5 px-2", entry.type === "Income" ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20" : "bg-red-500/10 text-red-700 border-red-500/20")}>
+                      {entry.type}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{entry.category}</p>
+                    <p className="text-sm font-semibold text-[#0B1F4D] mt-0.5">{entry.description}</p>
+                  </div>
+                  <div className="flex justify-between items-center text-xs pt-1">
+                    <span className="font-mono text-slate-400">Vehicle: {entry.vehicleNo || "—"}</span>
+                    <span className={cn("font-mono font-black text-sm", entry.type === "Income" ? "text-emerald-600" : "text-red-600")}>
+                      {entry.type === "Income" ? "+" : "-"} {formatCurrency(entry.amount)}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Desktop view: Table with Premium Styling */}
+          <div className="hidden md:block">
+            <Card className="border border-[#E5E7EB] rounded-[20px] bg-white shadow-sm ring-0 overflow-hidden">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[#E5E7EB] bg-slate-50 text-slate-400 uppercase tracking-wider text-[10px] font-bold">
+                        <th className="text-left py-3.5 px-5">Date</th>
+                        <th className="text-left py-3.5 px-5">Type</th>
+                        <th className="text-left py-3.5 px-5">Category</th>
+                        <th className="text-left py-3.5 px-5">Description</th>
+                        <th className="text-left py-3.5 px-5">Vehicle</th>
+                        <th className="text-left py-3.5 px-5">Trip</th>
+                        <th className="text-left py-3.5 px-5">Method</th>
+                        <th className="text-right py-3.5 px-5">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredEntries.map((entry) => (
+                        <tr
+                          key={entry._id || entry.id}
+                          className="border-b border-[#E5E7EB] hover:bg-slate-50 transition-colors cursor-pointer text-xs font-semibold"
+                          onClick={() => setSelectedEntry(entry)}
+                        >
+                          <td className="py-3.5 px-5 text-slate-500">{formatDate(entry.date)}</td>
+                          <td className="py-3.5 px-5">
+                            <Badge variant="outline" className={cn("text-[9px] rounded-full font-bold", entry.type === "Income" ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20" : "bg-red-500/10 text-red-700 border-red-500/20")}>
+                              {entry.type}
+                            </Badge>
+                          </td>
+                          <td className="py-3.5 px-5 text-[#0B1F4D]">{entry.category}</td>
+                          <td className="py-3.5 px-5 text-slate-500 max-w-[240px] truncate">{entry.description}</td>
+                          <td className="py-3.5 px-5 font-mono text-slate-500">{entry.vehicleNo || "—"}</td>
+                          <td className="py-3.5 px-5 font-mono text-slate-500">{entry.tripId || "—"}</td>
+                          <td className="py-3.5 px-5">
+                            <Badge variant="secondary" className="text-[10px] font-bold">{entry.paymentMode}</Badge>
+                          </td>
+                          <td className={cn("py-3.5 px-5 text-right font-mono font-black text-sm", entry.type === "Income" ? "text-emerald-600" : "text-red-600")}>
+                            {entry.type === "Income" ? "+" : "-"} {formatCurrency(entry.amount)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
 
       {/* Entry Detail Dialog */}
-      <Dialog
-        open={!!selectedEntry}
-        onOpenChange={() => setSelectedEntry(null)}
-      >
-        <DialogContent className="max-w-md">
+      <Dialog open={!!selectedEntry} onOpenChange={() => setSelectedEntry(null)}>
+        <DialogContent className="max-w-md rounded-[20px] bg-white border border-[#E5E7EB] text-[#0B1F4D]">
           {selectedEntry && (
             <>
               <DialogHeader>
-                <DialogTitle className="font-heading flex items-center gap-2">
+                <DialogTitle className="font-heading text-lg font-black flex items-center gap-2">
                   {selectedEntry.type === "Income" ? (
-                    <ArrowUpRight className="w-5 h-5 text-emerald-500" />
+                    <ArrowUpRight className="w-5 h-5 text-[#2E9E44]" />
                   ) : (
-                    <ArrowDownRight className="w-5 h-5 text-red-500" />
+                    <ArrowDownRight className="w-5 h-5 text-[#EF4444]" />
                   )}
                   {selectedEntry.category}
                 </DialogTitle>
-                <DialogDescription>
+                <DialogDescription className="text-slate-400 font-medium">
                   {selectedEntry.description}
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-3 py-4">
-                <div className="p-4 rounded-lg bg-muted/30 text-center">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
-                    Amount
-                  </p>
-                  <p
-                    className={cn(
-                      "text-2xl font-heading font-bold",
-                      selectedEntry.type === "Income"
-                        ? "text-emerald-600"
-                        : "text-red-600"
-                    )}
-                  >
-                    {selectedEntry.type === "Income" ? "+" : "-"}
-                    {formatCurrency(selectedEntry.amount)}
+              <div className="space-y-3 py-4 text-xs font-semibold">
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 text-center">
+                  <p className="text-[9px] text-slate-400 uppercase tracking-wider mb-1">Billing Amount</p>
+                  <p className={cn("text-2xl font-heading font-black", selectedEntry.type === "Income" ? "text-emerald-600" : "text-red-600")}>
+                    {selectedEntry.type === "Income" ? "+" : "-"} {formatCurrency(selectedEntry.amount)}
                   </p>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {[
-                    { label: "Date", value: formatDate(selectedEntry.date) },
-                    { label: "Type", value: selectedEntry.type },
-                    { label: "Category", value: selectedEntry.category },
-                    {
-                      label: "Payment Mode",
-                      value: selectedEntry.paymentMode,
-                    },
-                    {
-                      label: "Reference",
-                      value: selectedEntry.reference || "—",
-                    },
-                    {
-                      label: "Vehicle",
-                      value: selectedEntry.vehicleNo || "—",
-                    },
-                    {
-                      label: "Trip ID",
-                      value: selectedEntry.tripId || "—",
-                    },
-                    {
-                      label: "Consignment",
-                      value: selectedEntry.consignment || "—",
-                    },
+                    { label: "Date Created", value: formatDate(selectedEntry.date) },
+                    { label: "Ledger Type", value: selectedEntry.type },
+                    { label: "Payment Category", value: selectedEntry.category },
+                    { label: "Payment Mode", value: selectedEntry.paymentMode },
+                    { label: "Reference ID", value: selectedEntry.reference || "—" },
+                    { label: "Linked Vehicle", value: selectedEntry.vehicleNo || "—" },
+                    { label: "Linked Trip", value: selectedEntry.tripId || "—" },
+                    { label: "Linked Customer", value: selectedEntry.consignment || "—" },
                   ].map((item) => (
-                    <div
-                      key={item.label}
-                      className="flex justify-between py-1.5 text-sm border-b border-border/30"
-                    >
-                      <span className="text-muted-foreground">
-                        {item.label}
-                      </span>
-                      <span className="font-medium">{item.value}</span>
+                    <div key={item.label} className="flex justify-between py-2 border-b border-slate-100 font-medium">
+                      <span className="text-slate-400">{item.label}</span>
+                      <span className="text-[#0B1F4D]">{item.value}</span>
                     </div>
                   ))}
                 </div>

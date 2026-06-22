@@ -42,7 +42,7 @@ export function getStatusColor(status: string): string {
     case "Partial":
     case "In Transit":
     case "On Trip":
-      return "bg-blue-500/15 text-blue-700 border-blue-500/20";
+      return "bg-[#0B1F4D]/10 text-[#0B1F4D] border-[#0B1F4D]/20";
     case "Expired":
     case "Idle":
       return "bg-red-500/15 text-red-700 border-red-500/20";
